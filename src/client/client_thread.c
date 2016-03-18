@@ -40,8 +40,13 @@ send_request (int client_id, int request_id, int socket_fd)
 
   // TP2 TODO
 
+  int resourceRequest = 0; 
+  char *buffer = "test";
+  write(socket_fd,buffer,strlen(buffer));
+  request_sent++;
   fprintf (stdout, "Client %d is sending its %d request\n", client_id,
 	   request_id);
+
 
   // TP2 TODO:END
 
