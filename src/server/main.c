@@ -18,11 +18,11 @@ main (int argc, char *argv[argc + 1])
 
   // Part les fils d'exécution.
   for (unsigned int i = 0; i < num_server_threads; i++)
-    {
-      st[i].id = i;
-      pthread_attr_init (&(st[i].pt_attr));
-      pthread_create (&(st[i].pt_tid), &(st[i].pt_attr), &st_code, &(st[i]));
-    }
+  {
+    st[i].id = i;
+    pthread_attr_init (&(st[i].pt_attr));
+    pthread_create (&(st[i].pt_tid), &(st[i].pt_attr), &st_code, &(st[i]));
+  }
 
   for (unsigned int i = 0; i < num_server_threads; i++)
     pthread_join (st[i].pt_tid, NULL);
@@ -32,12 +32,12 @@ main (int argc, char *argv[argc + 1])
 
   // Affiche le journal.
   st_print_results (stdout, true);
-  FILE *fp=fopen("server_log", "w");
+  FILE *fp = fopen("server_log", "w");
   if (fp == NULL)
-    {
-      fprintf(stderr, "Could not print log");
-      return EXIT_FAILURE;
-    }
+  {
+    fprintf(stderr, "Could not print log");
+    return EXIT_FAILURE;
+  }
   st_print_results (fp, false);
   fclose(fp);
 
