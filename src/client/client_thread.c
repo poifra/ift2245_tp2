@@ -1,4 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+#include <strings.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include "client_thread.h"
 
@@ -11,10 +22,10 @@ extern const unsigned int **max_resources_per_client;
 
 // Variable du journal.
 // Nombre de requêtes (REQ envoyés)
-unsigned int count = 0; 
+unsigned int count = 0;
 
 // Nombre de requête acceptée (ACK reçus en réponse à REQ)
-unsigned int count_accepted = 0; 
+unsigned int count_accepted = 0;
 
 // Nombre de requête en attente (WAIT reçus en réponse à REQ)
 unsigned int count_on_wait = 0;
@@ -25,8 +36,15 @@ unsigned int count_invalid = 0;
 // Nombre de client qui se sont terminés correctement (ACC reçu en réponse à END)
 unsigned int count_dispatched = 0;
 
-// Nombre total de requêtes envoyées.                          
-unsigned int request_sent = 0; 
+// Nombre total de requêtes envoyées.
+unsigned int request_sent = 0;
+
+
+void error(const char *msg)
+{
+    perror(msg);
+    exit(0);
+}
 
 
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
@@ -38,17 +56,16 @@ void
 send_request (int client_id, int request_id, int socket_fd)
 {
 
-  // TP2 TODO
+	int resourceRequest = 0;
+	char *buffer = "test";
+	write(socket_fd, buffer, strlen(buffer));
+	request_sent++;
 
-  int resourceRequest = 0; 
-  char *buffer = "test";
-  write(socket_fd,buffer,strlen(buffer));
-  request_sent++;
-  fprintf (stdout, "Client %d is sending its %d request\n", client_id,
-	   request_id);
+	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
+	         request_id);
 
 
-  // TP2 TODO:END
+	// TP2 TODO:END
 
 }
 
@@ -56,47 +73,65 @@ send_request (int client_id, int request_id, int socket_fd)
 void *
 ct_code (void *param)
 {
-  int socket_fd;
-  client_thread *ct = (client_thread *) param;
+	int socket_fd;
+	client_thread *ct = (client_thread *) param;
+  struct sockaddr_in servAddr;
 
+  socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (socket_fd < 0)
+    error("ERROR opening socket");
 
-  // TP2 TODO
-  // Vous devez ici faire l'initialisation des petits clients (`INIT`).
-  // TP2 TODO:END
+  struct hostent *hst;
+  hst = gethostbyname("localhost");
+  if (hst == NULL)
+    error("no such host");
 
-  for (unsigned int request_id = 0; request_id < num_request_per_client;
-       request_id++)
-    {
+  bzero((char *) &servAddr, sizeof(servAddr));
+  servAddr.sin_family = AF_INET;
+  bcopy((char *) hst->h_addr_list[0],
+        (char*) &servAddr.sin_addr.s_addr,
+        hst->h_length);
+  servAddr.sin_port = htons(port_number);
 
-      // TP2 TODO
-      // Vous devez ici coder, conjointement avec le corps de send request,
-      // le protocole d'envoie de requête.
+	// TP2 TODO
+	// Vous devez ici faire l'initialisation des petits clients (`INIT`).
+	// TP2 TODO:END
+  if(connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
+    error("error connecting");
 
-      send_request (ct->id, request_id, socket_fd);
+	for (unsigned int request_id = 0; request_id < num_request_per_client;
+	        request_id++)
+	{
 
-      // TP2 TODO:END
+		// TP2 TODO
+		// Vous devez ici coder, conjointement avec le corps de send request,
+		// le protocole d'envoie de requête.
 
-    }
+	  send_request (ct->id, request_id, socket_fd);
 
-  pthread_exit (NULL);
+		// TP2 TODO:END
+
+	}
+
+	pthread_exit (NULL);
 }
 
 
-// 
+//
 // Vous devez changer le contenu de cette fonction afin de régler le
 // problème de synchronisation de la terminaison.
 // Le client doit attendre que le serveur termine le traitement de chacune
-// de ses requêtes avant de terminer l'exécution. 
+// de ses requêtes avant de terminer l'exécution.
 //
 void
 ct_wait_server ()
 {
 
-  // TP2 TODO
+	// TP2 TODO
 
-  sleep (2);
+	sleep (2);
 
-  // TP2 TODO:END
+	// TP2 TODO:END
 
 }
 
@@ -104,15 +139,15 @@ ct_wait_server ()
 void
 ct_init (client_thread * ct)
 {
-  ct->id = count++;
+	ct->id = count++;
 }
 
 void
 ct_create_and_start (client_thread * ct)
 {
-  pthread_attr_init (&(ct->pt_attr));
-  pthread_create (&(ct->pt_tid), &(ct->pt_attr), &ct_code, ct);
-  pthread_detach (ct->pt_tid);
+	pthread_attr_init (&(ct->pt_attr));
+	pthread_create (&(ct->pt_tid), &(ct->pt_attr), &ct_code, ct);
+	pthread_detach (ct->pt_tid);
 }
 
 //
@@ -123,21 +158,22 @@ ct_create_and_start (client_thread * ct)
 void
 st_print_results (FILE * fd, bool verbose)
 {
-  if (fd == NULL)
-    fd = stdout;
-  if (verbose)
-    {
-      fprintf (fd, "\n---- Résultat du client ----\n");
-      fprintf (fd, "Requêtes acceptées: %d\n", count_accepted);
-      fprintf (fd, "Requêtes : %d\n", count_on_wait);
-      fprintf (fd, "Requêtes invalides: %d\n", count_invalid);
-      fprintf (fd, "Clients : %d\n", count_dispatched);
-      fprintf (fd, "Requêtes envoyées: %d\n", request_sent);
-    }
-  else
-    {
-      fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
-	       count_invalid, count_dispatched, request_sent);
-    }fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
-	       count_invalid, count_dispatched, request_sent);
+	if (fd == NULL) {
+		fd = stdout;
+	}
+	if (verbose)
+	{
+		fprintf (fd, "\n---- Résultat du client ----\n");
+		fprintf (fd, "Requêtes acceptées: %d\n", count_accepted);
+		fprintf (fd, "Requêtes : %d\n", count_on_wait);
+		fprintf (fd, "Requêtes invalides: %d\n", count_invalid);
+		fprintf (fd, "Clients : %d\n", count_dispatched);
+		fprintf (fd, "Requêtes envoyées: %d\n", request_sent);
+	}
+	else
+	{
+		fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
+		         count_invalid, count_dispatched, request_sent);
+	} fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
+	           count_invalid, count_dispatched, request_sent);
 }

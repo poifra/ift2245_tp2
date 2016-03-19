@@ -81,7 +81,6 @@ void
 st_process_request (server_thread * st, int socket_fd)
 {
 	// TODO: Remplacer le contenu de cette fonction
-
 	char buffer[20];
 	bzero (buffer, 20);
 	int n = read (socket_fd, buffer, 19);
