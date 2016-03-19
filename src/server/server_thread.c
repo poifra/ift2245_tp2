@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <sys/select.h>
 #include <time.h>
 
 // Variable obtenue de /conf.c
@@ -68,8 +69,7 @@ void
 st_init ()
 {
 	// TODO
-  
-  //https://en.wikipedia.org/wiki/Banker%27s_algorithm
+	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
 	// Attend la connection d'un client et initialise les structures pour
 	// l'algorithme du banquier.
@@ -78,7 +78,7 @@ st_init ()
 }
 
 void
-st_process_request (server_thread * st, int socket_fd)
+st_process_request (server_thread *st, int socket_fd)
 {
 	// TODO: Remplacer le contenu de cette fonction
 	char buffer[20];
@@ -88,9 +88,15 @@ st_process_request (server_thread * st, int socket_fd)
 		perror ("ERROR reading from socket");
 	}
 
+	if (n != 5) //test to see if we receive test
+	{
+
+	}
+	else
+	{
 	printf ("Thread %d received the request: %s\n", st->id, buffer);
 
-	int answer_to_client = -(rand () % 2);
+	int answer_to_client = -(rand () % 2); //TODO : changer la réponse
 	n = sprintf (buffer, "%d", answer_to_client);
 	n = write (socket_fd, buffer, n);
 	if (n < 0) {
@@ -102,13 +108,14 @@ st_process_request (server_thread * st, int socket_fd)
 		request_processed++;
 	}
 	// TODO end
+	}
 };
 
 
 void
 st_signal ()
 {
-  //demande au clients de se terminer
+	//demande au clients de se terminer
 	// TODO: Remplacer le contenu de cette fonction
 
 
@@ -133,13 +140,16 @@ st_code (void *param)
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
-
+		if (thread_socket_fd > 0)
+		{
+			num_clients++;
+			break;
+		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
 			break;
 		}
 	}
-
 	// Boucle de traitement des requêtes.
 	while (clients_ended < num_clients)
 	{

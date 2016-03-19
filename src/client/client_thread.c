@@ -57,14 +57,16 @@ send_request (int client_id, int request_id, int socket_fd)
 {
 
 	int resourceRequest = 0;
-	char *buffer = "test";
+	static char *buffer = "test";
 	write(socket_fd, buffer, strlen(buffer));
 	request_sent++;
 
 	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
 	         request_id);
 
-
+  int n = read(socket_fd,buffer,strlen(buffer));
+  printf("response: %d",buffer);
+ // shutdown(socket_fd,2); //closes the socket
 	// TP2 TODO:END
 
 }
