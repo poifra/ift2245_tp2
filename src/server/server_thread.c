@@ -14,6 +14,8 @@
 #include <sys/select.h>
 #include <time.h>
 
+#include <stdbool.h>
+
 // Variable obtenue de /conf.c
 extern const int port_number;
 
@@ -65,9 +67,21 @@ unsigned int clients_ended = 0;
 // Nombre de clients. Nombre reçu du client lors de la requête BEGIN.
 unsigned int num_clients;
 
+
+void error(const char *msg)
+{
+	perror(msg);
+	exit(0);
+}
+
+
 void
 st_init ()
 {
+	int i, j;
+	int count = num_server_threads;
+	bool safe = false;
+
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -80,35 +94,36 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	// TODO: Remplacer le contenu de cette fonction
-	char buffer[20];
-	bzero (buffer, 20);
-	int n = read (socket_fd, buffer, 19);
-	if (n < 0) {
-		perror ("ERROR reading from socket");
-	}
-
-	if (n != 5) //test to see if we receive test
+	request_processed++;
+	p_msg message;
+	char *data = (char *) &message;
+	int remaining = sizeof(message);
+	int rc;
+	while (remaining)
 	{
-
-	}
-	else
-	{
-	printf ("Thread %d received the request: %s\n", st->id, buffer);
-
-	int answer_to_client = -(rand () % 2); //TODO : changer la réponse
-	n = sprintf (buffer, "%d", answer_to_client);
-	n = write (socket_fd, buffer, n);
-	if (n < 0) {
-		perror ("ERROR writing to socket");
+		rc = read(socket_fd, data + sizeof(message) - remaining, remaining);
+		if (rc < 0) {
+			error("server error on read");
+		}
+		remaining -= rc;
 	}
 
-	if (read (socket_fd, buffer, 255) == 0)
-	{
-		request_processed++;
+	printf("thread %d recu: %d (%d bytes) \n", st->id,*data,sizeof(message));
+
+	p_msg reponse = ACK;
+	char *reponseBuffer = (char *) &reponse;
+	remaining = sizeof(reponse);
+	rc = 0;
+	while (remaining){
+		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
+		if (rc < 0){
+			error("server error on write");
+		}
+		remaining -= rc;
 	}
+
 	// TODO end
-	}
+
 };
 
 

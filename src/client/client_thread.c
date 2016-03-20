@@ -42,8 +42,8 @@ unsigned int request_sent = 0;
 
 void error(const char *msg)
 {
-    perror(msg);
-    exit(0);
+	perror(msg);
+	exit(0);
 }
 
 
@@ -57,16 +57,38 @@ send_request (int client_id, int request_id, int socket_fd)
 {
 
 	int resourceRequest = 0;
-	static char *buffer = "test";
-	write(socket_fd, buffer, strlen(buffer));
+	p_msg message = INIT;
+	char *data = (char *) &message;
+	int remaining = sizeof(message);
+	int rc;
+	while (remaining)
+	{
+		rc = write(socket_fd, data + sizeof(message) - remaining, remaining);
+		if (rc < 0) {
+			error("client error on write");
+		}
+		remaining -= rc;
+	}
+
 	request_sent++;
 
 	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
 	         request_id);
 
-  int n = read(socket_fd,buffer,strlen(buffer));
-  printf("response: %d",buffer);
- // shutdown(socket_fd,2); //closes the socket
+	p_msg reponse;
+	data = (char*) reponse;
+	remaining = sizeof(reponse);
+	rc = 0;
+	while(remaining)
+	{
+		rc = read(socket_fd,data+sizeof(reponse)-remaining,remaining);
+		if (rc < 0){
+			error("client error on read");
+		}
+		remaining -= rc;
+	}
+
+	printf("response: %d\n", reponse);
 	// TP2 TODO:END
 
 }
@@ -77,29 +99,32 @@ ct_code (void *param)
 {
 	int socket_fd;
 	client_thread *ct = (client_thread *) param;
-  struct sockaddr_in servAddr;
+	struct sockaddr_in servAddr;
 
-  socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (socket_fd < 0)
-    error("ERROR opening socket");
+	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (socket_fd < 0) {
+		error("ERROR opening socket");
+	}
 
-  struct hostent *hst;
-  hst = gethostbyname("localhost");
-  if (hst == NULL)
-    error("no such host");
+	struct hostent *hst;
+	hst = gethostbyname("localhost");
+	if (hst == NULL) {
+		error("no such host");
+	}
 
-  bzero((char *) &servAddr, sizeof(servAddr));
-  servAddr.sin_family = AF_INET;
-  bcopy((char *) hst->h_addr_list[0],
-        (char*) &servAddr.sin_addr.s_addr,
-        hst->h_length);
-  servAddr.sin_port = htons(port_number);
+	bzero((char *) &servAddr, sizeof(servAddr));
+	servAddr.sin_family = AF_INET;
+	bcopy((char *) hst->h_addr_list[0],
+	      (char*) &servAddr.sin_addr.s_addr,
+	      hst->h_length);
+	servAddr.sin_port = htons(port_number);
 
 	// TP2 TODO
 	// Vous devez ici faire l'initialisation des petits clients (`INIT`).
 	// TP2 TODO:END
-  if(connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0)
-    error("error connecting");
+	if (connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
+		error("error connecting");
+	}
 
 	for (unsigned int request_id = 0; request_id < num_request_per_client;
 	        request_id++)
@@ -109,7 +134,7 @@ ct_code (void *param)
 		// Vous devez ici coder, conjointement avec le corps de send request,
 		// le protocole d'envoie de requête.
 
-	  send_request (ct->id, request_id, socket_fd);
+		send_request (ct->id, request_id, socket_fd);
 
 		// TP2 TODO:END
 
