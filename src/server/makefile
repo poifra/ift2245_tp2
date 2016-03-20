@@ -21,9 +21,11 @@ format: $(DEPS)
 	rm -f *~
 
 $(BUILD_DIR)/server/%.o: %.c $(DEPS)
+	mkdir -p ${BUILD_DIR}/server
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(BUILD_DIR)/tp2_server: $(OBJ)
+	mkdir -p ${BUILD_DIR}
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

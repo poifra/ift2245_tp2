@@ -1,6 +1,6 @@
-CLIENT_DIR=client
-SERVER_DIR=server
-BUILD_DIR=../build
+CLIENT_DIR=src/client
+SERVER_DIR=src/server
+BUILD_DIR=build
 TIMEOUT=10
 VALGRIND=valgrind --leak-check=yes --error-exitcode=1
 
