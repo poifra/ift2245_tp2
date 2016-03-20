@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I. -std=c99 -lpthread
+CFLAGS=-I. -g -std=c99 -lpthread
 
 HEADERS = server_thread.h
 

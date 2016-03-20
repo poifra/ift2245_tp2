@@ -74,26 +74,18 @@ void error(const char *msg)
 	exit(0);
 }
 
-
+ 
 void
 st_init ()
 {
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
-
-	for (int k = 0; k < num_resources; k++)
-	{
-		available[k] = available_resources[k];
+	available = malloc(num_resources*sizeof(int));
+	if(available == NULL){
+		error("null pointer exception");
 	}
 
-	for (int k = 0; k < num_resources; k++)
-	{
-		for (int l = 0; l < num_resources; l++)
-		{
-			allocation[k][l] = 0;
-		}
-	}
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -126,6 +118,7 @@ st_process_request (server_thread *st, int socket_fd)
 			close(socket_fd);
 		break;
 		case REQ:
+		case INIT:
 			request_processed++;
 		break;
 

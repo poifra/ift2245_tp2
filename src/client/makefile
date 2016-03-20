@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I../conf -std=c99 -lpthread
+CFLAGS=-I../conf -g -std=c99 -lpthread
 
 HEADERS = client_thread.h
 

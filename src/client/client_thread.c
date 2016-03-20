@@ -57,7 +57,7 @@ send_request (int client_id, int request_id, int socket_fd)
 {
 
 	int resourceRequest = 0;
-	p_msg message = INIT;
+	p_msg message = REQ;
 	char *data = (char *) &message;
 	int remaining = sizeof(message);
 	int rc;
@@ -124,19 +124,19 @@ ct_code (void *param)
 		error("error connecting");
 	}
 	int request_id = 0;
-	/*for (unsigned int request_id = 0; request_id <= num_request_per_client;
+	for (unsigned int request_id = 0; request_id <= num_request_per_client;
 	        request_id++)
-	{*/
+	{
 
-		// TP2 TODO
-		// Vous devez ici coder, conjointement avec le corps de send request,
-		// le protocole d'envoie de requête.
+	// TP2 TODO
+	// Vous devez ici coder, conjointement avec le corps de send request,
+	// le protocole d'envoie de requête.
 
-		send_request (ct->id, request_id, socket_fd);
+	send_request (ct->id, request_id, socket_fd);
 
-		// TP2 TODO:END
+	// TP2 TODO:END
 
-//	}
+	}
 
 	pthread_exit (NULL);
 }
