@@ -82,6 +82,18 @@ st_init ()
 	int count = num_server_threads;
 	bool safe = false;
 
+	for (int k = 0; k < num_resources; k++)
+	{
+		available[k] = available_resources[k];
+	}
+
+	for (int k = 0; k < num_resources; k++)
+	{
+		for (int l = 0; l < num_resources; l++)
+		{
+			allocation[k][l] = 0;
+		}
+	}
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -94,7 +106,6 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	request_processed++;
 	p_msg message;
 	char *data = (char *) &message;
 	int remaining = sizeof(message);
@@ -108,6 +119,17 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 	}
 
+
+	switch(*data){
+		case END:
+			clients_ended++;
+			close(socket_fd);
+		break;
+		case REQ:
+			request_processed++;
+		break;
+
+	}
 	printf("thread %d recu: %d (%d bytes) \n", st->id,*data,sizeof(message));
 
 	p_msg reponse = ACK;
@@ -158,14 +180,17 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			num_clients++;
-			break;
+			st_process_request(st,thread_socket_fd);
+			thread_socket_fd = -1;
 		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
-			break;
+			fprintf (stderr, "Time out on thread %d.\n", st->id);
+			pthread_exit (NULL);
 		}
 	}
 	// Boucle de traitement des requêtes.
+	/*
 	while (clients_ended < num_clients)
 	{
 		if ((time (NULL) - start) >= max_wait_time)
@@ -182,6 +207,7 @@ st_code (void *param)
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
 	}
+	*/
 }
 
 

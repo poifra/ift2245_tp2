@@ -71,9 +71,8 @@ send_request (int client_id, int request_id, int socket_fd)
 			error("client error on write");
 		}
 		remaining -= rc;
+		request_sent++;
 	}
-
-	request_sent++;
 
 	p_msg reponse;
 	data = (char*) &reponse;
@@ -81,7 +80,6 @@ send_request (int client_id, int request_id, int socket_fd)
 	rc = 0;
 	while (remaining)
 	{
-		printf("read\n");
 		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
 		if (rc < 0) {
 			error("client error on read");
@@ -90,7 +88,6 @@ send_request (int client_id, int request_id, int socket_fd)
 	}
 
 	printf("response: %d\n", reponse);
-	// TP2 TODO:END
 
 }
 
@@ -126,10 +123,10 @@ ct_code (void *param)
 	if (connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
 		error("error connecting");
 	}
-
-	for (unsigned int request_id = 0; request_id < num_request_per_client;
+	int request_id = 0;
+	/*for (unsigned int request_id = 0; request_id <= num_request_per_client;
 	        request_id++)
-	{
+	{*/
 
 		// TP2 TODO
 		// Vous devez ici coder, conjointement avec le corps de send request,
@@ -139,7 +136,7 @@ ct_code (void *param)
 
 		// TP2 TODO:END
 
-	}
+//	}
 
 	pthread_exit (NULL);
 }
