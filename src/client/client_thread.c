@@ -61,6 +61,9 @@ send_request (int client_id, int request_id, int socket_fd)
 	char *data = (char *) &message;
 	int remaining = sizeof(message);
 	int rc;
+
+	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
+	         request_id);
 	while (remaining)
 	{
 		rc = write(socket_fd, data + sizeof(message) - remaining, remaining);
@@ -72,17 +75,15 @@ send_request (int client_id, int request_id, int socket_fd)
 
 	request_sent++;
 
-	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
-	         request_id);
-
 	p_msg reponse;
-	data = (char*) reponse;
+	data = (char*) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
-	while(remaining)
+	while (remaining)
 	{
-		rc = read(socket_fd,data+sizeof(reponse)-remaining,remaining);
-		if (rc < 0){
+		printf("read\n");
+		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
+		if (rc < 0) {
 			error("client error on read");
 		}
 		remaining -= rc;
