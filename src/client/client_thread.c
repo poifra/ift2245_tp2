@@ -13,6 +13,7 @@
 
 #include "client_thread.h"
 
+
 // Variable de configuration.
 extern const int port_number;
 extern const unsigned int num_clients;
@@ -39,13 +40,13 @@ unsigned int count_dispatched = 0;
 // Nombre total de requêtes envoyées.
 unsigned int request_sent = 0;
 
-void error(const char *msg)
+int thread_running[NUM_CLIENTS];
+
+void error(const char *msg,...)
 {
 	perror(msg);
 	exit(0);
 }
-
-
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
 // Les ressources demandées par la requête doivent être choisit aléatoirement
 // (sans dépasser le maximum pour le client). Les peuvent être positive ou négative.
@@ -63,9 +64,9 @@ send_request (int client_id, int request_id, int socket_fd)
 	char *data = (char *) &msg;
 	int remaining = sizeof(msg);
 	int rc;
-
 	while (remaining)
 	{
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		rc = write(socket_fd, data + sizeof(msg) - remaining, remaining);
 		if (rc < 0) {
 			error("client error on write");
@@ -73,7 +74,6 @@ send_request (int client_id, int request_id, int socket_fd)
 		remaining -= rc;
 	}
 	request_sent++;
-	printf ("Client %d has sent its request %d\n", client_id, request_id);
 
 	message reponse;
 	data = (char*) &reponse;
@@ -82,13 +82,14 @@ send_request (int client_id, int request_id, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
-			error("client error on read");
+			error("client request error on read");
 		}
 		remaining -= rc;
 	}
 
-	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
+//	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
 
 }
 
@@ -98,6 +99,7 @@ ct_code (void *param)
 {
 	int socket_fd;
 	client_thread *ct = (client_thread *) param;
+
 	struct sockaddr_in servAddr;
 
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -127,10 +129,11 @@ ct_code (void *param)
 	int request_id = 0;
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
-		printf("client %d sending request %d\n",ct->id,request_id);
+		printf("client %d sending request %d\n", ct->id, request_id);
 		send_request (ct->id, request_id, socket_fd);
 	}
-	printf("thats all for client %d\n",ct->id);
+	printf("thats all for client %d\n", ct->id);
+ 	*ct->thread_running = 0;
 	pthread_exit (NULL);
 
 }
@@ -145,11 +148,19 @@ ct_code (void *param)
 void
 ct_wait_server ()
 {
-
+	int running;
 	// TP2 TODO
-
-	sleep (2);
-
+	do {
+		running = 0;
+		for (int i = 0; i < num_clients; i++)
+			if (thread_running[i]) {
+				running++;
+			}
+		if (running) {
+			sleep(1);
+		}
+	}
+	while (running != 0);
 	// TP2 TODO:END
 
 }
@@ -159,6 +170,8 @@ void
 ct_init (client_thread * ct)
 {
 	ct->id = count++;
+	thread_running[ct->id] = 1;
+	ct->thread_running  = &thread_running[ct->id];
 }
 
 void

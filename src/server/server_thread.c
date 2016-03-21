@@ -104,6 +104,7 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
@@ -133,6 +134,7 @@ st_process_request (server_thread *st, int socket_fd)
 	remaining = sizeof(reponse);
 	rc = 0;
 	while (remaining){
+		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
 		if (rc < 0){
 			error("server error on write");
@@ -148,9 +150,8 @@ st_signal ()
 {
 	//demande au clients de se terminer
 	// TODO: Remplacer le contenu de cette fonction
-
-
-
+	sleep(5);
+	printf("signal\n");
 	// TODO end
 }
 
@@ -183,8 +184,10 @@ st_code (void *param)
 			pthread_exit (NULL);
 		}
 	}
-	// Boucle de traitement des requêtes.
-	/*
+
+
+	// Boucle de traitement des requêtes
+	// Boucle tant qu'il reste des clients qui n'ont pas envoyé END
 	while (clients_ended < num_clients)
 	{
 		if ((time (NULL) - start) >= max_wait_time)
@@ -201,7 +204,7 @@ st_code (void *param)
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
 	}
-	*/
+	
 }
 
 

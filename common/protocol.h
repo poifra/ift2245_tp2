@@ -1,6 +1,9 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#define NUM_CLIENTS 1
+#define NUM_RESOURCES 3
+
 typedef enum PROTOCOL_MESSAGE p_msg;
 enum PROTOCOL_MESSAGE
 {
