@@ -67,7 +67,6 @@ unsigned int clients_ended = 0;
 // Nombre de clients. Nombre reçu du client lors de la requête BEGIN.
 unsigned int num_clients;
 
-
 void error(const char *msg)
 {
 	perror(msg);
@@ -98,19 +97,20 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	p_msg message;
-	char *data = (char *) &message;
-	int remaining = sizeof(message);
+	message msg;
+	char *data = (char *) &msg;
+	int remaining = sizeof(msg);
 	int rc;
 	while (remaining)
 	{
-		rc = read(socket_fd, data + sizeof(message) - remaining, remaining);
+		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
 		if (rc < 0) {
 			error("server error on read");
 		}
 		remaining -= rc;
 	}
 
+	printf("server thread %d has read message %d from client %d request %d\n", st->id, msg.message_code, msg.clientId, msg.reqId);
 
 	switch(*data){
 		case END:
@@ -123,9 +123,12 @@ st_process_request (server_thread *st, int socket_fd)
 		break;
 
 	}
-	printf("thread %d recu: %d (%d bytes) \n", st->id,*data,sizeof(message));
 
-	p_msg reponse = ACK;
+	message reponse;
+	reponse.message_code = ACK;
+	reponse.clientId = msg.clientId;
+	reponse.reqId = msg.reqId;
+
 	char *reponseBuffer = (char *) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
@@ -136,8 +139,6 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
-
-	// TODO end
 
 };
 

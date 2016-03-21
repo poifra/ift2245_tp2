@@ -39,7 +39,6 @@ unsigned int count_dispatched = 0;
 // Nombre total de requêtes envoyées.
 unsigned int request_sent = 0;
 
-
 void error(const char *msg)
 {
 	perror(msg);
@@ -56,25 +55,27 @@ void
 send_request (int client_id, int request_id, int socket_fd)
 {
 
-	int resourceRequest = 0;
-	p_msg message = REQ;
-	char *data = (char *) &message;
-	int remaining = sizeof(message);
+	message msg;
+	msg.message_code = REQ;
+	msg.clientId = client_id;
+	msg.reqId = request_id;
+
+	char *data = (char *) &msg;
+	int remaining = sizeof(msg);
 	int rc;
 
-	fprintf (stdout, "Client %d is sending its %d request\n", client_id,
-	         request_id);
 	while (remaining)
 	{
-		rc = write(socket_fd, data + sizeof(message) - remaining, remaining);
+		rc = write(socket_fd, data + sizeof(msg) - remaining, remaining);
 		if (rc < 0) {
 			error("client error on write");
 		}
 		remaining -= rc;
-		request_sent++;
 	}
+	request_sent++;
+	printf ("Client %d has sent its request %d\n", client_id, request_id);
 
-	p_msg reponse;
+	message reponse;
 	data = (char*) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
@@ -87,7 +88,7 @@ send_request (int client_id, int request_id, int socket_fd)
 		remaining -= rc;
 	}
 
-	printf("response: %d\n", reponse);
+	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
 
 }
 
@@ -124,21 +125,14 @@ ct_code (void *param)
 		error("error connecting");
 	}
 	int request_id = 0;
-	for (unsigned int request_id = 0; request_id <= num_request_per_client;
-	        request_id++)
+	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
-
-	// TP2 TODO
-	// Vous devez ici coder, conjointement avec le corps de send request,
-	// le protocole d'envoie de requête.
-
-	send_request (ct->id, request_id, socket_fd);
-
-	// TP2 TODO:END
-
+		printf("client %d sending request %d\n",ct->id,request_id);
+		send_request (ct->id, request_id, socket_fd);
 	}
-
+	printf("thats all for client %d\n",ct->id);
 	pthread_exit (NULL);
+
 }
 
 

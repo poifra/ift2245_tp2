@@ -11,6 +11,8 @@ default: all
 all:
 	cd $(CLIENT_DIR) && make
 	cd $(SERVER_DIR) && make
+	echo "cool"
+
 
 run: all
 	$(BUILD_DIR)/tp2_server & $(BUILD_DIR)/tp2_client
