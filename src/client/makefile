@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I../conf -std=c99 -lpthread
+CFLAGS=-I../conf -g -std=c99 -lpthread
 
 HEADERS = client_thread.h
 
@@ -14,16 +14,18 @@ BUILD_DIR=../../build
 
 default: $(BUILD_DIR)/tp2_client
 
-all: default
+all: default	
 
 format: $(DEPS)
 	indent -gnu $(DEPS) $(HEADERS)
 	rm -f *~
 
-$(BUILD_DIR)/client/%.o: %.c $(DEPS)
+$(BUILD_DIR)/client/%.o: %.c $(DEPS)	
+	mkdir -p ${BUILD_DIR}/client
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(BUILD_DIR)/tp2_client: $(OBJ)
+	mkdir -p ${BUILD_DIR}
 	$(CC) -o $@ $^ $(CFLAGS)
 
 clean:

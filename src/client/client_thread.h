@@ -8,12 +8,13 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "../common/protocol.h"
+#include "../../common/protocol.h"
 
 typedef struct client_thread client_thread;
 struct client_thread
 {
   unsigned int id;
+  int *thread_running;
   pthread_t pt_tid;
   pthread_attr_t pt_attr;
 };

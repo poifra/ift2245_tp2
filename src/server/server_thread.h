@@ -9,6 +9,8 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include "../../common/protocol.h"
+
 typedef struct server_thread server_thread;
 struct server_thread
 {

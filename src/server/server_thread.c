@@ -11,7 +11,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <sys/select.h>
 #include <time.h>
+
+#include <stdbool.h>
 
 // Variable obtenue de /conf.c
 extern const int port_number;
@@ -64,12 +67,26 @@ unsigned int clients_ended = 0;
 // Nombre de clients. Nombre reçu du client lors de la requête BEGIN.
 unsigned int num_clients;
 
+void error(const char *msg)
+{
+	perror(msg);
+	exit(0);
+}
+
+ 
 void
 st_init ()
 {
+	int i, j;
+	int count = num_server_threads;
+	bool safe = false;
+	available = malloc(num_resources*sizeof(int));
+	if(available == NULL){
+		error("null pointer exception");
+	}
+
 	// TODO
-  
-  //https://en.wikipedia.org/wiki/Banker%27s_algorithm
+	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
 	// Attend la connection d'un client et initialise les structures pour
 	// l'algorithme du banquier.
@@ -78,42 +95,63 @@ st_init ()
 }
 
 void
-st_process_request (server_thread * st, int socket_fd)
+st_process_request (server_thread *st, int socket_fd)
 {
-	// TODO: Remplacer le contenu de cette fonction
-
-	char buffer[20];
-	bzero (buffer, 20);
-	int n = read (socket_fd, buffer, 19);
-	if (n < 0) {
-		perror ("ERROR reading from socket");
-	}
-
-	printf ("Thread %d received the request: %s\n", st->id, buffer);
-
-	int answer_to_client = -(rand () % 2);
-	n = sprintf (buffer, "%d", answer_to_client);
-	n = write (socket_fd, buffer, n);
-	if (n < 0) {
-		perror ("ERROR writing to socket");
-	}
-
-	if (read (socket_fd, buffer, 255) == 0)
+	message msg;
+	char *data = (char *) &msg;
+	int remaining = sizeof(msg);
+	int rc;
+	while (remaining)
 	{
-		request_processed++;
+		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		if (rc < 0) {
+			error("server error on read");
+		}
+		remaining -= rc;
 	}
-	// TODO end
+
+	printf("server thread %d has read message %d from client %d request %d\n", st->id, msg.message_code, msg.clientId, msg.reqId);
+
+	switch(*data){
+		case END:
+			clients_ended++;
+			close(socket_fd);
+		break;
+		case REQ:
+		case INIT:
+			request_processed++;
+		break;
+
+	}
+
+	message reponse;
+	reponse.message_code = ACK;
+	reponse.clientId = msg.clientId;
+	reponse.reqId = msg.reqId;
+
+	char *reponseBuffer = (char *) &reponse;
+	remaining = sizeof(reponse);
+	rc = 0;
+	while (remaining){
+		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
+		if (rc < 0){
+			error("server error on write");
+		}
+		remaining -= rc;
+	}
+
 };
 
 
 void
 st_signal ()
 {
-  //demande au clients de se terminer
+	//demande au clients de se terminer
 	// TODO: Remplacer le contenu de cette fonction
-
-
-
+	sleep(5);
+	printf("signal\n");
 	// TODO end
 }
 
@@ -134,14 +172,22 @@ st_code (void *param)
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
-
+		if (thread_socket_fd > 0)
+		{
+			num_clients++;
+			st_process_request(st,thread_socket_fd);
+			thread_socket_fd = -1;
+		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
-			break;
+			fprintf (stderr, "Time out on thread %d.\n", st->id);
+			pthread_exit (NULL);
 		}
 	}
 
-	// Boucle de traitement des requêtes.
+
+	// Boucle de traitement des requêtes
+	// Boucle tant qu'il reste des clients qui n'ont pas envoyé END
 	while (clients_ended < num_clients)
 	{
 		if ((time (NULL) - start) >= max_wait_time)
@@ -158,6 +204,7 @@ st_code (void *param)
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
 	}
+	
 }
 
 
