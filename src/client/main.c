@@ -2,11 +2,30 @@
 
 #include "client_thread.h"
 
+#include <stdint.h>
+
 extern unsigned int num_clients;
 
 int
 main (int argc, char *argv[argc + 1])
 {
+
+  uint32_t *theMotherOfAllRequests = malloc(sizeof(uint32_t)*2);
+  if (theMotherOfAllRequests == NULL)
+  {
+    printf("memory is kill\n");
+    exit(-1);
+  }
+
+  theMotherOfAllRequests[0] = BEGIN;
+  theMotherOfAllRequests[1] = num_clients;
+
+  if(clientBegin(theMotherOfAllRequests) == -1)
+  {
+    printf("The server said screw you\n");
+    exit(-1);
+  }
+
   client_thread client_threads[num_clients];
 
   for (unsigned int i = 0; i < num_clients; i++)

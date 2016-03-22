@@ -42,7 +42,7 @@ unsigned int request_sent = 0;
 
 int thread_running[NUM_CLIENTS];
 
-void error(const char *msg,...)
+void error(const char *msg)
 {
 	perror(msg);
 	exit(0);
@@ -93,7 +93,70 @@ send_request (int client_id, int request_id, int socket_fd)
 
 }
 
+int clientBegin(uint32_t *message) {
+	int socket_fd = getSocketDescriptor();
+	
+	char *data = (char *) &message;
+	int remaining = sizeof(message);
+	int rc;
+	while (remaining)
+	{
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(message) - remaining, sizeof(message), remaining, rc);
+		rc = write(socket_fd, data + sizeof(message) - remaining, remaining);
+		if (rc < 0) {
+			error("client error on write");
+		}
+		remaining -= rc;
+	}
+	request_sent++;
+	uint32_t *reponse = malloc(2*sizeof(uint32_t));
+	if (reponse == NULL){
+		error("failed to allocate memory to store reponse");
+	}
+	char *data = (char *) &msg;
+	int remaining = sizeof(reponse);
+	int rc;
+	while (remaining)
+	{
+		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&reponse,data + sizeof(reponse) - remaining,sizeof(reponse),remaining,rc);
+		if (rc < 0) {
+			error("server error on read");
+		}
+		remaining -= rc;
+	}
+	if ()
 
+
+}
+
+int getSocketDescriptor(){
+	struct sockaddr_in servAddr;
+
+	socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (socket_fd < 0) {
+		error("ERROR opening socket");
+	}
+
+	struct hostent *hst;
+	hst = gethostbyname("localhost");
+	if (hst == NULL) {
+		error("no such host");
+	}
+
+	bzero((char *) &servAddr, sizeof(servAddr));
+	servAddr.sin_family = AF_INET;
+	bcopy((char *) hst->h_addr_list[0],
+			(char*) &servAddr.sin_addr.s_addr,
+			hst->h_length);
+	servAddr.sin_port = htons(port_number);
+
+	if (connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
+		error("error connecting");
+	}
+
+	return socket_fd;
+}
 void *
 ct_code (void *param)
 {
@@ -116,8 +179,8 @@ ct_code (void *param)
 	bzero((char *) &servAddr, sizeof(servAddr));
 	servAddr.sin_family = AF_INET;
 	bcopy((char *) hst->h_addr_list[0],
-	      (char*) &servAddr.sin_addr.s_addr,
-	      hst->h_length);
+			(char*) &servAddr.sin_addr.s_addr,
+			hst->h_length);
 	servAddr.sin_port = htons(port_number);
 
 	// TP2 TODO
@@ -133,7 +196,7 @@ ct_code (void *param)
 		send_request (ct->id, request_id, socket_fd);
 	}
 	printf("thats all for client %d\n", ct->id);
- 	*ct->thread_running = 0;
+	*ct->thread_running = 0;
 	pthread_exit (NULL);
 
 }
@@ -205,7 +268,7 @@ st_print_results (FILE * fd, bool verbose)
 	else
 	{
 		fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
-		         count_invalid, count_dispatched, request_sent);
+					count_invalid, count_dispatched, request_sent);
 	} fprintf (fd, "%d %d %d %d %d\n", count_accepted, count_on_wait,
-	           count_invalid, count_dispatched, request_sent);
+				  count_invalid, count_dispatched, request_sent);
 }
