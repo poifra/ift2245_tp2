@@ -73,10 +73,56 @@ void error(const char *msg)
 	exit(0);
 }
 
+void begin_request()
+{
+	uint32_t clientRequest = malloc(2*sizeof(uint32_t));
+	char *data = (char *) &clientRequest;
+	int remaining = sizeof(clientRequest);
+	int rc;
+	while (remaining)
+	{
+		rc = read(socket_fd, data + sizeof(clientRequest) - remaining, remaining);
+	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		if (rc < 0) {
+			error("server error on read");
+		}
+		remaining -= rc;
+	}
+
+	if(clientRequest[0] != BEGIN)
+	{
+		//requête non valide
+	}
+	else
+	{
+		num_clients = (int) clientRequest[1];
+
+		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
+	}
+}
  
 void
 st_init ()
 {
+	struct sockaddr_in thread_addr;
+	socklen_t socket_len = sizeof (thread_addr);
+	int thread_socket_fd = -1;
+	int start = time (NULL);
+
+	// Boucle jusqu'à ce que accept recoive la première connection.
+	while (thread_socket_fd < 0)
+	{
+		thread_socket_fd =
+		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
+		            &socket_len);
+		if (thread_socket_fd > 0)
+		{
+			num_clients++;
+			begin_request();
+			thread_socket_fd = -1;
+		}
+	}
+
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
@@ -176,7 +222,6 @@ st_code (void *param)
 		{
 			num_clients++;
 			st_process_request(st,thread_socket_fd);
-			thread_socket_fd = -1;
 		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{

@@ -17,12 +17,4 @@ enum PROTOCOL_MESSAGE
   INIT
 };
 
-typedef struct message message;
-struct message {
-	p_msg message_code;
-	int clientId;
-	int reqId;
-	int *resourceRequest;
-};
-
 #endif

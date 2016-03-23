@@ -47,6 +47,12 @@ void error(const char *msg)
 	perror(msg);
 	exit(0);
 }
+
+uint32_t* manageRequest(int clientId, int request_id, int socket_fd, uint32_t* toSend)
+{
+	uint32_t *reponse;
+	return reponse;
+}
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
 // Les ressources demandées par la requête doivent être choisit aléatoirement
 // (sans dépasser le maximum pour le client). Les peuvent être positive ou négative.
