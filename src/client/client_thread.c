@@ -42,6 +42,8 @@ unsigned int request_sent = 0;
 
 int thread_running[NUM_CLIENTS];
 
+int getSocketDescriptor();
+
 void error(const char *msg)
 {
 	perror(msg);
@@ -62,11 +64,11 @@ void
 send_request (int client_id, int request_id, int socket_fd)
 {
 
-	message msg;
-	msg.message_code = REQ;
-	msg.clientId = client_id;
-	msg.reqId = request_id;
-
+	uint32_t *msg = malloc(5*sizeof(uint32_t));
+	if (msg == NULL)
+	{
+		error("mourru");
+	}
 	char *data = (char *) &msg;
 	int remaining = sizeof(msg);
 	int rc;
@@ -81,7 +83,11 @@ send_request (int client_id, int request_id, int socket_fd)
 	}
 	request_sent++;
 
-	message reponse;
+	uint32_t *reponse = malloc(2*sizeof(uint32_t));
+	if (reponse == NULL)
+	{
+		error("mourru réponse");
+	}
 	data = (char*) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
@@ -107,7 +113,7 @@ int clientBegin(uint32_t *message) {
 	int rc;
 	while (remaining)
 	{
-		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(message) - remaining, sizeof(message), remaining, rc);
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &message, data + sizeof(message) - remaining, sizeof(message), remaining, rc);
 		rc = write(socket_fd, data + sizeof(message) - remaining, remaining);
 		if (rc < 0) {
 			error("client error on write");
@@ -119,9 +125,8 @@ int clientBegin(uint32_t *message) {
 	if (reponse == NULL){
 		error("failed to allocate memory to store reponse");
 	}
-	char *data = (char *) &msg;
-	int remaining = sizeof(reponse);
-	int rc;
+	data = (char *) &reponse;
+	remaining = sizeof(reponse);
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
@@ -131,12 +136,13 @@ int clientBegin(uint32_t *message) {
 		}
 		remaining -= rc;
 	}
-	if ()
 
 
 }
 
-int getSocketDescriptor(){
+int getSocketDescriptor()
+{
+	int socket_fd;
 	struct sockaddr_in servAddr;
 
 	socket_fd = socket(AF_INET, SOCK_STREAM, 0);

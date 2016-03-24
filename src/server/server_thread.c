@@ -75,13 +75,13 @@ void error(const char *msg)
 
 void begin_request()
 {
-	uint32_t clientRequest = malloc(2*sizeof(uint32_t));
+	uint32_t *clientRequest = malloc(2*sizeof(uint32_t));
 	char *data = (char *) &clientRequest;
 	int remaining = sizeof(clientRequest);
 	int rc;
 	while (remaining)
 	{
-		rc = read(socket_fd, data + sizeof(clientRequest) - remaining, remaining);
+		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
 	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
 			error("server error on read");
@@ -143,7 +143,11 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	message msg;
+	uint32_t *msg = malloc(5*sizeof(uint32_t));
+	if (msg == NULL)
+	{
+		error("mourru");
+	}
 	char *data = (char *) &msg;
 	int remaining = sizeof(msg);
 	int rc;
@@ -157,8 +161,6 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 	}
 
-	printf("server thread %d has read message %d from client %d request %d\n", st->id, msg.message_code, msg.clientId, msg.reqId);
-
 	switch(*data){
 		case END:
 			clients_ended++;
@@ -171,11 +173,11 @@ st_process_request (server_thread *st, int socket_fd)
 
 	}
 
-	message reponse;
-	reponse.message_code = ACK;
-	reponse.clientId = msg.clientId;
-	reponse.reqId = msg.reqId;
-
+	uint32_t *reponse = malloc(2*sizeof(uint32_t));
+	if (reponse == NULL)
+	{
+		error("memoire epuisée");
+	}
 	char *reponseBuffer = (char *) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
