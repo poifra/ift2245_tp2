@@ -75,21 +75,22 @@ void error(const char *msg)
 
 void begin_request()
 {
-	uint32_t *clientRequest = malloc(2*sizeof(uint32_t));
+	uint32_t *clientRequest = malloc(2 * sizeof(uint32_t));
 	char *data = (char *) &clientRequest;
 	int remaining = sizeof(clientRequest);
 	int rc;
 	while (remaining)
 	{
+		printf("server socket before read : %d\n",server_socket_fd);
 		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
-	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
-			error("server error on read");
+			error("server error on read begin request");
 		}
 		remaining -= rc;
 	}
 
-	if(clientRequest[0] != BEGIN)
+	if (clientRequest[0] != BEGIN)
 	{
 		//requête non valide
 	}
@@ -99,8 +100,11 @@ void begin_request()
 
 		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
 	}
+
+	free(clientRequest);
+	clientRequest = NULL;
 }
- 
+
 void
 st_init ()
 {
@@ -121,13 +125,19 @@ st_init ()
 			begin_request();
 			thread_socket_fd = -1;
 		}
+
+		if ((time (NULL) - start) >= max_wait_time)
+		{
+			printf ("Time out on thread while waiting for begin.\n");
+			pthread_exit (NULL);
+		}
 	}
 
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
-	available = malloc(num_resources*sizeof(int));
-	if(available == NULL){
+	available = malloc(num_resources * sizeof(int));
+	if (available == NULL) {
 		error("null pointer exception");
 	}
 
@@ -143,7 +153,7 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	uint32_t *msg = malloc(5*sizeof(uint32_t));
+	uint32_t *msg = malloc(5 * sizeof(uint32_t));
 	if (msg == NULL)
 	{
 		error("mourru");
@@ -154,37 +164,39 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
 		remaining -= rc;
 	}
-
-	switch(*data){
-		case END:
-			clients_ended++;
-			close(socket_fd);
+	switch (msg[0]) {
+	case END:
+		clients_ended++;
+		close(socket_fd);
 		break;
-		case REQ:
-		case INIT:
-			request_processed++;
+	case REQ:
+	case BEGIN:
 		break;
-
+	case INIT:
+		request_processed++;
+		break;
+	default:
+		printf("lolnope\n");
+		break;
 	}
 
-	uint32_t *reponse = malloc(2*sizeof(uint32_t));
-	if (reponse == NULL)
-	{
+	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
+	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
 	char *reponseBuffer = (char *) &reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
-	while (remaining){
-		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+	while (remaining) {
+		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
-		if (rc < 0){
+		if (rc < 0) {
 			error("server error on write");
 		}
 		remaining -= rc;
@@ -223,7 +235,7 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			num_clients++;
-			st_process_request(st,thread_socket_fd);
+			st_process_request(st, thread_socket_fd);
 		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
@@ -251,7 +263,7 @@ st_code (void *param)
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
 	}
-	
+
 }
 
 

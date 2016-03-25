@@ -107,7 +107,7 @@ send_request (int client_id, int request_id, int socket_fd)
 
 int clientBegin(uint32_t *message) {
 	int socket_fd = getSocketDescriptor();
-	
+	printf("socked descriptor %d\n",socket_fd);
 	char *data = (char *) &message;
 	int remaining = sizeof(message);
 	int rc;
@@ -132,10 +132,12 @@ int clientBegin(uint32_t *message) {
 		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
 		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&reponse,data + sizeof(reponse) - remaining,sizeof(reponse),remaining,rc);
 		if (rc < 0) {
-			error("server error on read");
+			error("client error on reaaaaaaaaaaaaaaaaaaaad");
 		}
 		remaining -= rc;
 	}
+
+	printf("reponse[0] : %d", reponse[0]);
 
 
 }
