@@ -70,7 +70,7 @@ unsigned int num_clients;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(-1);
 }
 
 void
@@ -94,7 +94,7 @@ st_init ()
 			pthread_exit (NULL);
 		}
 	}
-	st_process_request(NULL,socket_fd); //on traite le begin
+	st_process_request(NULL, socket_fd); //on traite le begin
 
 	int i, j;
 	int count = num_server_threads;
@@ -127,7 +127,7 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		printf("read data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
@@ -136,19 +136,26 @@ st_process_request (server_thread *st, int socket_fd)
 
 	switch (msg[0])
 	{
-		case END:
-			clients_ended++;
-			close(socket_fd);
-			break;
-		case REQ:
-		case BEGIN:
-			num_clients = msg[1];
-		case INIT:
-			request_processed++;
-			break;
-		default:
-			printf("lolnope\n");
-			break;
+	case END:
+		printf("END recu\n");
+		clients_ended++;
+		close(socket_fd);
+		break;
+	case REQ:
+		request_processed++;
+		printf("REQ recu\n");
+		break;
+	case BEGIN:
+		printf("BEGIN recu\n");
+		num_clients = msg[1];
+		break;
+	case INIT:
+		printf("INIT recu\n");
+		request_processed++;
+		break;
+	default:
+		printf("lolnope\n");
+		break;
 	}
 	free(msg);
 	msg = NULL;
@@ -157,12 +164,15 @@ st_process_request (server_thread *st, int socket_fd)
 	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
+
+	reponse[0] = ACK;
+	reponse[1] = -1;
 	char *reponseBuffer = (char *) reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
 	while (remaining) {
-		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
+		printf("write data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
 			error("server error on write");
 		}
@@ -209,7 +219,7 @@ st_code (void *param)
 		if ((time (NULL) - start) >= max_wait_time)
 		{
 			fprintf (stderr, "Time out on thread %d.\n", st->id);
-			pthread_exit (NULL);
+		//	pthread_exit (NULL);
 		}
 	}
 
@@ -226,7 +236,7 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			st_process_request (st, thread_socket_fd);
-			close (thread_socket_fd);
+		//	close (thread_socket_fd);
 		}
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,

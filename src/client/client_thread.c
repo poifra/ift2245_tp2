@@ -89,7 +89,7 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	while (remaining)
 	{
 		rc = write(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		printf("write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
 			error("client error on write");
 		}
@@ -105,12 +105,12 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	data = (char*) reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
-	while (remaining)
+	while (reponse[0] != ACK || reponse[0] != WAIT || remaining)
 	{
 		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
-		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		printf("read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd,data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
 		if (rc < 0) {
-			error("client request error on read");
+			error("client error on read");
 		}
 		remaining -= rc;
 	}
@@ -152,12 +152,9 @@ int getSocketDescriptor()
 void *
 ct_code (void *param)
 {
-	int socket_fd;
+	int socket_fd = getSocketDescriptor();
 	client_thread *ct = (client_thread *) param;
 
-	struct sockaddr_in servAddr;
-
-	socket_fd = getSocketDescriptor();
 	int request_id = 0;
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
