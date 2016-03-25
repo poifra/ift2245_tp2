@@ -67,6 +67,7 @@ unsigned int clients_ended = 0;
 // Nombre de clients. Nombre reçu du client lors de la requête BEGIN.
 unsigned int num_clients;
 
+int* client_sockets;
 void error(const char *msg)
 {
 	perror(msg);
@@ -75,7 +76,8 @@ void error(const char *msg)
 
 void begin_request()
 {
-	uint32_t clientRequest = malloc(2*sizeof(uint32_t));
+        //uint32_t clientRequest = malloc(2*sizeof(uint32_t));
+        uint32_t clientRequest[3];
 	char *data = (char *) &clientRequest;
 	int remaining = sizeof(clientRequest);
 	int rc;
@@ -91,11 +93,16 @@ void begin_request()
 
 	if(clientRequest[0] != BEGIN)
 	{
-		//requête non valide
+		error("Error: invalid request from client. Expected 'BEGIN num_resources num_clients'");//requête non valide
 	}
 	else
 	{
-		num_clients = (int) clientRequest[1];
+                if(num_resources != clientRequest[1]){
+                        error("Error: number of resources declared by the client invalid");//Erreur
+                } else {
+                        num_clients = (int) clientRequest[2];
+                        client_sockets = malloc(num_clients*sizeof(int*));
+                }
 
 		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
 	}
@@ -123,14 +130,32 @@ st_init ()
 		}
 	}
 
+
+        //initialisation des structures de donnée
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
 	available = malloc(num_resources*sizeof(int));
-	if(available == NULL){
+	allocation = malloc(num_resources*sizeof(int*));
+        max = malloc(num_clients*sizeof(int*));
+        need = malloc(num_clients*sizeof(int*));
+        if(available == NULL || allocation == NULL || max == NULL || need == NULL){
 		error("null pointer exception");
 	}
-
+        for(i = 0; i < num_resources; i++){
+                available[i] = available_resources[i];
+                allocation[i] = malloc(num_resources*sizeof(int));
+                max[i] = malloc(num_resources*sizeof(int));
+                need[i] = malloc(num_resources*sizeof(int));
+                if(available[i] == NULL || allocation[i] == NULL || max[i] == NULL || need[i] == NULL){
+                        error("null pointer exception");
+                }
+                for(j = 0; j < num_clients; j++){
+                        allocation[i][j] = 0;
+                        max[i][j] = 0;
+                        need[i][j] = 0;
+                }
+        }
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -150,7 +175,8 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
+                       data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
@@ -160,15 +186,17 @@ st_process_request (server_thread *st, int socket_fd)
 	printf("server thread %d has read message %d from client %d request %d\n", st->id, msg.message_code, msg.clientId, msg.reqId);
 
 	switch(*data){
-		case END:
-			clients_ended++;
-			close(socket_fd);
+        case END:
+                clients_ended++;
+                close(socket_fd);
 		break;
-		case REQ:
-		case INIT:
-			request_processed++;
-		break;
-
+        case REQ:
+        case INIT:
+                request_processed++;
+                break;
+        default:
+                printf(stderr,"Server thread %d has received an invalid request from client %d: %d",
+                       st->id, msg.message_code, msg.clientId, msg.reqId);
 	}
 
 	message reponse;
@@ -180,7 +208,8 @@ st_process_request (server_thread *st, int socket_fd)
 	remaining = sizeof(reponse);
 	rc = 0;
 	while (remaining){
-		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
+                       data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
 		if (rc < 0){
 			error("server error on write");
