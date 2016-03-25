@@ -10,7 +10,7 @@ int
 main (int argc, char *argv[argc + 1])
 {
 
-  uint32_t *theMotherOfAllRequests = malloc(sizeof(uint32_t)*2);
+  uint32_t *theMotherOfAllRequests = malloc(sizeof(uint32_t)*5);
   if (theMotherOfAllRequests == NULL)
   {
     printf("memory is kill\n");
@@ -19,8 +19,12 @@ main (int argc, char *argv[argc + 1])
 
   theMotherOfAllRequests[0] = BEGIN;
   theMotherOfAllRequests[1] = num_clients;
+  theMotherOfAllRequests[2] = -1;
+  theMotherOfAllRequests[3] = -1;
+  theMotherOfAllRequests[4] = -1;
 
-  if(clientBegin(theMotherOfAllRequests) == -1)
+
+  if(send_request(0,0,0,theMotherOfAllRequests) == -1)
   {
     printf("The server said screw you\n");
     exit(-1);

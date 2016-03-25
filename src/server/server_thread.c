@@ -73,58 +73,20 @@ void error(const char *msg)
 	exit(0);
 }
 
-void begin_request()
-{
-	uint32_t *clientRequest = malloc(2 * sizeof(uint32_t));
-	char *data = (char *) &clientRequest;
-	int remaining = sizeof(clientRequest);
-	int rc;
-	while (remaining)
-	{
-		printf("server socket before read : %d\n",server_socket_fd);
-		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
-		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
-		if (rc < 0) {
-			error("server error on read begin request");
-		}
-		remaining -= rc;
-	}
-
-	if (clientRequest[0] != BEGIN)
-	{
-		//requête non valide
-	}
-	else
-	{
-		num_clients = (int) clientRequest[1];
-
-		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
-	}
-
-	free(clientRequest);
-	clientRequest = NULL;
-}
-
 void
 st_init ()
 {
 	struct sockaddr_in thread_addr;
 	socklen_t socket_len = sizeof (thread_addr);
-	int thread_socket_fd = -1;
+	int socket_fd = -1;
 	int start = time (NULL);
 
 	// Boucle jusqu'à ce que accept recoive la première connection.
-	while (thread_socket_fd < 0)
+	while (socket_fd < 0)
 	{
-		thread_socket_fd =
+		socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
-		if (thread_socket_fd > 0)
-		{
-			num_clients++;
-			begin_request();
-			thread_socket_fd = -1;
-		}
 
 		if ((time (NULL) - start) >= max_wait_time)
 		{
@@ -132,6 +94,7 @@ st_init ()
 			pthread_exit (NULL);
 		}
 	}
+	st_process_request(NULL,socket_fd); //on traite le begin
 
 	int i, j;
 	int count = num_server_threads;
@@ -140,7 +103,7 @@ st_init ()
 	if (available == NULL) {
 		error("null pointer exception");
 	}
-
+	free(available);
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -156,9 +119,9 @@ st_process_request (server_thread *st, int socket_fd)
 	uint32_t *msg = malloc(5 * sizeof(uint32_t));
 	if (msg == NULL)
 	{
-		error("mourru");
+		error("pas de mémoire");
 	}
-	char *data = (char *) &msg;
+	char *data = (char *) msg;
 	int remaining = sizeof(msg);
 	int rc;
 	while (remaining)
@@ -170,27 +133,31 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
-	switch (msg[0]) {
-	case END:
-		clients_ended++;
-		close(socket_fd);
-		break;
-	case REQ:
-	case BEGIN:
-		break;
-	case INIT:
-		request_processed++;
-		break;
-	default:
-		printf("lolnope\n");
-		break;
+
+	switch (msg[0])
+	{
+		case END:
+			clients_ended++;
+			close(socket_fd);
+			break;
+		case REQ:
+		case BEGIN:
+			num_clients = msg[1];
+		case INIT:
+			request_processed++;
+			break;
+		default:
+			printf("lolnope\n");
+			break;
 	}
+	free(msg);
+	msg = NULL;
 
 	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
 	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
-	char *reponseBuffer = (char *) &reponse;
+	char *reponseBuffer = (char *) reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
 	while (remaining) {
@@ -201,6 +168,8 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
+	free(reponse);
+	reponse = NULL;
 
 };
 
@@ -291,6 +260,7 @@ st_open_socket ()
 	}
 
 	listen (server_socket_fd, server_backlog_size);
+	printf("listening on socket %d\n", server_socket_fd);
 }
 
 
