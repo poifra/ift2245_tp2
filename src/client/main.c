@@ -4,8 +4,8 @@
 
 #include <stdint.h>
 
-extern unsigned int num_clients;
-
+extern const unsigned int num_clients;
+extern const unsigned int num_resources;
 int
 main (int argc, char *argv[argc + 1])
 {
@@ -19,7 +19,7 @@ main (int argc, char *argv[argc + 1])
 
   theMotherOfAllRequests[0] = BEGIN;
   theMotherOfAllRequests[1] = num_clients;
-  theMotherOfAllRequests[2] = -1;
+  theMotherOfAllRequests[2] = num_resources;
   theMotherOfAllRequests[3] = -1;
   theMotherOfAllRequests[4] = -1;
 

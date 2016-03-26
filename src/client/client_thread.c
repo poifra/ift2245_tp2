@@ -50,12 +50,6 @@ void error(const char *msg)
 	perror(msg);
 	exit(0);
 }
-
-uint32_t* manageRequest(int clientId, int request_id, int socket_fd, uint32_t* toSend)
-{
-	uint32_t *reponse;
-	return reponse;
-}
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
 // Les ressources demandées par la requête doivent être choisit aléatoirement
 // (sans dépasser le maximum pour le client). Les peuvent être positive ou négative.
@@ -72,18 +66,21 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	if (message == NULL)
 	{
 		msg = malloc(size);
+		if (msg == NULL) {
+			error("mourru");
+		}
 		msg[0] = REQ;
 		msg[1] = 5; //TODO: set real values
 		msg[2] = 4;
 		msg[3] = 3;
 		msg[4] = 2;
-		if (msg == NULL) {
-			error("mourru");
-		}
 	}
 	else {
+		printf("else\n");
 		msg = message;
 	}
+
+	printf("msg[0] client %d\n",msg[0]);
 
 	char *data = (char *) msg;
 	int remaining = size;

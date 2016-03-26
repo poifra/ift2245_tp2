@@ -76,38 +76,39 @@ void error(const char *msg)
 
 void begin_request()
 {
-        //uint32_t clientRequest = malloc(2*sizeof(uint32_t));
-        uint32_t clientRequest[3];
+	//uint32_t clientRequest = malloc(2*sizeof(uint32_t));
+	uint32_t clientRequest[3];
 	char *data = (char *) &clientRequest;
 	int remaining = sizeof(clientRequest);
 	int rc;
 	while (remaining)
 	{
 		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
-	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
 		remaining -= rc;
 	}
 
-	if(clientRequest[0] != BEGIN)
+	if (clientRequest[0] != BEGIN)
 	{
 		error("Error: invalid request from client. Expected 'BEGIN num_resources num_clients'");//requête non valide
 	}
 	else
 	{
-                if(num_resources != clientRequest[1]){
-                        error("Error: number of resources declared by the client invalid");//Erreur
-                } else {
-                        num_clients = (int) clientRequest[2];
-                        client_sockets = malloc(num_clients*sizeof(int*));
-                }
+		if (num_resources != clientRequest[1]) {
+			error("Error: number of resources declared by the client invalid");//Erreur
+		}
+		else {
+			num_clients = (int) clientRequest[2];
+			client_sockets = malloc(num_clients * sizeof(int*));
+		}
 
 		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
 	}
 }
- 
+
 
 void
 st_init ()
@@ -133,31 +134,31 @@ st_init ()
 	st_process_request(NULL, socket_fd); //on traite le begin
 
 
-        //initialisation des structures de donnée
+	//initialisation des structures de donnée
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
-	available = malloc(num_resources*sizeof(int));
-	allocation = malloc(num_resources*sizeof(int*));
-        max = malloc(num_clients*sizeof(int*));
-        need = malloc(num_clients*sizeof(int*));
-        if(available == NULL || allocation == NULL || max == NULL || need == NULL){
+	available = malloc(num_resources * sizeof(int));
+	allocation = malloc(num_resources * sizeof(int*));
+	max = malloc(num_clients * sizeof(int*));
+	need = malloc(num_clients * sizeof(int*));
+	if (available == NULL || allocation == NULL || max == NULL || need == NULL) {
 		error("null pointer exception");
 	}
-        for(i = 0; i < num_resources; i++){
-                available[i] = available_resources[i];
-                allocation[i] = malloc(num_resources*sizeof(int));
-                max[i] = malloc(num_resources*sizeof(int));
-                need[i] = malloc(num_resources*sizeof(int));
-                if(allocation[i] == NULL || max[i] == NULL || need[i] == NULL){
-                        error("null pointer exception");
-                }
-                for(j = 0; j < num_clients; j++){
-                        allocation[i][j] = 0;
-                        max[i][j] = 0;
-                        need[i][j] = 0;
-                }
-        }
+	for (i = 0; i < num_resources; i++) {
+		available[i] = available_resources[i];
+		allocation[i] = malloc(num_resources * sizeof(int));
+		max[i] = malloc(num_resources * sizeof(int));
+		need[i] = malloc(num_resources * sizeof(int));
+		if (available[i] == NULL || allocation[i] == NULL || max[i] == NULL || need[i] == NULL) {
+			error("null pointer exception");
+		}
+		for (j = 0; j < num_clients; j++) {
+			allocation[i][j] = 0;
+			max[i][j] = 0;
+			need[i][j] = 0;
+		}
+	}
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -170,7 +171,7 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	int size = sizeof(uint32_t)*5;
+	int size = sizeof(uint32_t) * 5;
 	uint32_t *msg = malloc(size);
 	if (msg == NULL)
 	{
@@ -182,10 +183,10 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 
-		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
+		rc = read(socket_fd, data + size - remaining, remaining);
 
 		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
-                       data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+		       data, &msg, data + size - remaining, size, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on read");
@@ -213,14 +214,14 @@ st_process_request (server_thread *st, int socket_fd)
 		request_processed++;
 		break;
 	default:
-		printf("lolnope\n");
+		printf("lolnope msg[0] is %d \n",msg[0]);
 		break;
 	}
 
 	free(msg);
 	msg = NULL;
-	
-	size = sizeof(uint32_t)*2;
+
+	size = sizeof(uint32_t) * 2;
 	uint32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("memoire epuisée");
@@ -229,14 +230,15 @@ st_process_request (server_thread *st, int socket_fd)
 	reponse[0] = ACK;
 	reponse[1] = -1;
 	char *reponseBuffer = (char *) reponse;
-	
+
 	remaining = size;
 	rc = 0;
-	while (remaining){
-                printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
-                       data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
-                
-                
+	while (remaining) {
+
+		rc = write(socket_fd, data + size - remaining, remaining);
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
+		       data, &msg, data + size - remaining, remaining, rc);
+
 		if (rc < 0) {
 			error("server error on write");
 		}
@@ -283,7 +285,7 @@ st_code (void *param)
 		if ((time (NULL) - start) >= max_wait_time)
 		{
 			fprintf (stderr, "Time out on thread %d.\n", st->id);
-		//	pthread_exit (NULL);
+			//	pthread_exit (NULL);
 		}
 	}
 
@@ -300,7 +302,7 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			st_process_request (st, thread_socket_fd);
-		//	close (thread_socket_fd);
+			//	close (thread_socket_fd);
 		}
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
