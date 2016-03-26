@@ -83,7 +83,7 @@ void begin_request()
 	int rc;
 	while (remaining)
 	{
-		rc = read(socket_fd, data + sizeof(clientRequest) - remaining, remaining);
+		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
 	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
 		if (rc < 0) {
 			error("server error on read");
@@ -149,7 +149,7 @@ st_init ()
                 allocation[i] = malloc(num_resources*sizeof(int));
                 max[i] = malloc(num_resources*sizeof(int));
                 need[i] = malloc(num_resources*sizeof(int));
-                if(available[i] == NULL || allocation[i] == NULL || max[i] == NULL || need[i] == NULL){
+                if(allocation[i] == NULL || max[i] == NULL || need[i] == NULL){
                         error("null pointer exception");
                 }
                 for(j = 0; j < num_clients; j++){
