@@ -116,18 +116,19 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	uint32_t *msg = malloc(5 * sizeof(uint32_t));
+	int size = sizeof(uint32_t)*5;
+	uint32_t *msg = malloc(size);
 	if (msg == NULL)
 	{
 		error("pas de mémoire");
 	}
 	char *data = (char *) msg;
-	int remaining = sizeof(msg);
+	int remaining = size;
 	int rc;
 	while (remaining)
 	{
-		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("read data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		rc = read(socket_fd, data + size - remaining, remaining);
+		printf("read data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("server error on read");
 		}
@@ -157,10 +158,12 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("lolnope\n");
 		break;
 	}
+
 	free(msg);
 	msg = NULL;
-
-	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
+	
+	size = sizeof(uint32_t)*2;
+	uint32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
@@ -168,11 +171,12 @@ st_process_request (server_thread *st, int socket_fd)
 	reponse[0] = ACK;
 	reponse[1] = -1;
 	char *reponseBuffer = (char *) reponse;
-	remaining = sizeof(reponse);
+	
+	remaining = size;
 	rc = 0;
 	while (remaining) {
-		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
-		printf("write data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		rc = write(socket_fd, reponseBuffer + size - remaining, remaining);
+		printf("write data on socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd, data, &reponse, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("server error on write");
 		}

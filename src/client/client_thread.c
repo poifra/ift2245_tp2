@@ -43,6 +43,7 @@ unsigned int request_sent = 0;
 int thread_running[NUM_CLIENTS];
 
 int getSocketDescriptor();
+int send_request (int client_id, int request_id, int socket_fd, uint32_t *message);
 
 void error(const char *msg)
 {
@@ -64,12 +65,13 @@ int
 send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 {
 	uint32_t *msg;
+	int size = sizeof(uint32_t)*5;
 	if (socket_fd == 0)
 		socket_fd = getSocketDescriptor();
 
 	if (message == NULL)
 	{
-		msg = malloc(5 * sizeof(uint32_t));
+		msg = malloc(size);
 		msg[0] = REQ;
 		msg[1] = 5; //TODO: set real values
 		msg[2] = 4;
@@ -84,12 +86,12 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	}
 
 	char *data = (char *) msg;
-	int remaining = sizeof(msg);
+	int remaining = size;
 	int rc;
 	while (remaining)
 	{
-		rc = write(socket_fd, data + sizeof(msg) - remaining, remaining);
-		printf("write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",socket_fd, data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		rc = write(socket_fd, data + size - remaining, remaining);
+		printf("write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("client error on write");
 		}
@@ -97,18 +99,19 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	}
 	request_sent++;
 
-	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
+	size = 2*sizeof(uint32_t);
+	uint32_t *reponse = malloc(size);
 	if (reponse == NULL) {
-		error("mourru réponse");
+		error("pas de mémoire pour lire la réponse du serveur");
 	}
 
 	data = (char*) reponse;
-	remaining = sizeof(reponse);
+	remaining = size;
 	rc = 0;
-	while (reponse[0] != ACK || reponse[0] != WAIT || remaining)
+	while (remaining)
 	{
-		rc = read(socket_fd, data + sizeof(reponse) - remaining, remaining);
-		printf("read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd,data, &msg, data + sizeof(msg) - remaining, sizeof(msg), remaining, rc);
+		rc = read(socket_fd, data + size - remaining, remaining);
+		printf("read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("client error on read");
 		}
