@@ -170,16 +170,18 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	uint32_t *msg = malloc(5 * sizeof(uint32_t));
+	int size = sizeof(uint32_t)*5;
+	uint32_t *msg = malloc(size);
 	if (msg == NULL)
 	{
 		error("pas de mémoire");
 	}
 	char *data = (char *) msg;
-	int remaining = sizeof(msg);
+	int remaining = size;
 	int rc;
 	while (remaining)
 	{
+
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
 
 		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
@@ -214,10 +216,12 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("lolnope\n");
 		break;
 	}
+
 	free(msg);
 	msg = NULL;
-
-	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
+	
+	size = sizeof(uint32_t)*2;
+	uint32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
@@ -225,12 +229,14 @@ st_process_request (server_thread *st, int socket_fd)
 	reponse[0] = ACK;
 	reponse[1] = -1;
 	char *reponseBuffer = (char *) reponse;
-	remaining = sizeof(reponse);
+	
+	remaining = size;
 	rc = 0;
 	while (remaining){
-		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
+                printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
                        data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
-
+                
+                
 		if (rc < 0) {
 			error("server error on write");
 		}
