@@ -71,7 +71,7 @@ int* client_sockets;
 void error(const char *msg)
 {
 	perror(msg);
-	exit(0);
+	exit(-1);
 }
 
 void begin_request()
@@ -108,27 +108,29 @@ void begin_request()
 	}
 }
  
+
 void
 st_init ()
 {
 	struct sockaddr_in thread_addr;
 	socklen_t socket_len = sizeof (thread_addr);
-	int thread_socket_fd = -1;
+	int socket_fd = -1;
 	int start = time (NULL);
 
 	// Boucle jusqu'à ce que accept recoive la première connection.
-	while (thread_socket_fd < 0)
+	while (socket_fd < 0)
 	{
-		thread_socket_fd =
+		socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
-		if (thread_socket_fd > 0)
+
+		if ((time (NULL) - start) >= max_wait_time)
 		{
-			num_clients++;
-			begin_request();
-			thread_socket_fd = -1;
+			printf ("Time out on thread while waiting for begin.\n");
+			pthread_exit (NULL);
 		}
 	}
+	st_process_request(NULL, socket_fd); //on traite le begin
 
 
         //initialisation des structures de donnée
@@ -168,56 +170,76 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	message msg;
-	char *data = (char *) &msg;
+	uint32_t *msg = malloc(5 * sizeof(uint32_t));
+	if (msg == NULL)
+	{
+		error("pas de mémoire");
+	}
+	char *data = (char *) msg;
 	int remaining = sizeof(msg);
 	int rc;
 	while (remaining)
 	{
 		rc = read(socket_fd, data + sizeof(msg) - remaining, remaining);
+
 		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
                        data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
+
 		if (rc < 0) {
 			error("server error on read");
 		}
 		remaining -= rc;
 	}
 
-	printf("server thread %d has read message %d from client %d request %d\n", st->id, msg.message_code, msg.clientId, msg.reqId);
-
-	switch(*data){
-        case END:
-                clients_ended++;
-                close(socket_fd);
+	switch (msg[0])
+	{
+	case END:
+		printf("END recu\n");
+		clients_ended++;
+		close(socket_fd);
 		break;
-        case REQ:
-        case INIT:
-                request_processed++;
-                break;
-        default:
-                printf(stderr,"Server thread %d has received an invalid request from client %d: %d",
-                       st->id, msg.message_code, msg.clientId, msg.reqId);
+	case REQ:
+		request_processed++;
+		printf("REQ recu\n");
+		break;
+	case BEGIN:
+		printf("BEGIN recu\n");
+		num_clients = msg[1];
+		break;
+	case INIT:
+		printf("INIT recu\n");
+		request_processed++;
+		break;
+	default:
+		printf("lolnope\n");
+		break;
+	}
+	free(msg);
+	msg = NULL;
+
+	uint32_t *reponse = malloc(2 * sizeof(uint32_t));
+	if (reponse == NULL) {
+		error("memoire epuisée");
 	}
 
-	message reponse;
-	reponse.message_code = ACK;
-	reponse.clientId = msg.clientId;
-	reponse.reqId = msg.reqId;
-
-	char *reponseBuffer = (char *) &reponse;
+	reponse[0] = ACK;
+	reponse[1] = -1;
+	char *reponseBuffer = (char *) reponse;
 	remaining = sizeof(reponse);
 	rc = 0;
 	while (remaining){
 		printf("ẁrite data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
                        data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
-		rc = write(socket_fd, reponseBuffer + sizeof(reponse) - remaining, remaining);
-		if (rc < 0){
+
+		if (rc < 0) {
 			error("server error on write");
 		}
 		remaining -= rc;
 	}
+	free(reponse);
+	reponse = NULL;
 
-};
+}
 
 
 void
@@ -250,12 +272,12 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			num_clients++;
-			st_process_request(st,thread_socket_fd);
+			st_process_request(st, thread_socket_fd);
 		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
 			fprintf (stderr, "Time out on thread %d.\n", st->id);
-			pthread_exit (NULL);
+		//	pthread_exit (NULL);
 		}
 	}
 
@@ -272,13 +294,13 @@ st_code (void *param)
 		if (thread_socket_fd > 0)
 		{
 			st_process_request (st, thread_socket_fd);
-			close (thread_socket_fd);
+		//	close (thread_socket_fd);
 		}
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
 	}
-	
+
 }
 
 
@@ -306,6 +328,7 @@ st_open_socket ()
 	}
 
 	listen (server_socket_fd, server_backlog_size);
+	printf("listening on socket %d\n", server_socket_fd);
 }
 
 
