@@ -185,7 +185,7 @@ st_process_request (server_thread *st, int socket_fd)
 	}
 	msg = (int *) data;
 
-	printf("le serveur a recu %d sur le socket %d\n", msg[0], socket_fd);
+	printf("le serveur reçoit %d %d %d %d %d sur le socket %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], socket_fd);
 
 	int32_t reponse[2];
 	int waiting_time = 10;//temps d'attente en secondes.

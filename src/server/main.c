@@ -5,6 +5,9 @@
 
 extern unsigned int num_server_threads;
 
+void st_init_banquier();
+void st_wait_begin();
+
 int
 main (int argc, char *argv[argc + 1])
 {

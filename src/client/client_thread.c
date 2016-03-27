@@ -46,9 +46,10 @@ void error(const char *msg)
 
 void initThreadRunning()
 {
-	thread_running = malloc(num_clients*sizeof(int));
-	for (int i = 0; i < num_clients; i++)
+	thread_running = malloc(num_clients * sizeof(int));
+	for (int i = 0; i < num_clients; i++) {
 		thread_running[i] = 0;
+	}
 }
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
 // Les ressources demandées par la requête doivent être choisit aléatoirement
@@ -59,7 +60,7 @@ int
 send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 {
 	int32_t *msg;
-	int size = sizeof(int32_t)*5;
+	int size = sizeof(int32_t) * (num_resources+2);
 
 	if (message == NULL)
 	{
@@ -68,10 +69,17 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			error("mourru");
 		}
 		msg[0] = REQ;
-		msg[1] = client_id; //TODO: set real values
-		msg[2] = 4;
-		msg[3] = 3;
-		msg[4] = 2;
+		msg[1] = client_id; 
+
+		int32_t freeOrGet = 0;
+		int32_t amount = 0;
+		//choose random values to ask or release
+		for(int i = 2; i < num_clients; i++)
+		{
+			freeOrGet = rand() % 2 ? -1 : 1;
+			amount = (rand() % max_resources_per_client[client_id][i]);
+			msg[i] = freeOrGet * amount;
+		}
 	}
 	else {
 		msg = message;
@@ -93,9 +101,9 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	}
 	request_sent++;
 
-	printf("le client envoie %d sur le socket %d\n", msg[0], socket_fd);
+	printf("le client envoie %d %d %d %d %d sur le socket %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], socket_fd);
 
-	size = 2*sizeof(int32_t);
+	size = 2 * sizeof(int32_t);
 	int32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("pas de mémoire pour lire la réponse du serveur");
@@ -109,13 +117,29 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		rc = read(socket_fd, data + size - remaining, remaining);
 //		printf("client %d request %d read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
-			printf("client %d requete %d va pas bien :(\n",client_id, request_id);
+			printf("client %d requete %d va pas bien :(\n", client_id, request_id);
 			error("client error on read");
 		}
 		remaining -= rc;
 	}
-
-	printf("le serveur a repondu %d sur le socket %d\n",reponse[0], socket_fd);
+	switch (reponse[0])
+	{
+	case REFUSE:
+		count_invalid++;
+		break;
+	case ACK:
+		if(msg[0]==END)
+			count_dispatched++;
+		else
+			count_accepted++;
+		break;
+	case WAIT:
+		count_on_wait++;
+		break;
+	default:
+		printf("code de reponse inconnu %d\n", reponse[0]);
+	}
+	printf("le serveur a repondu %d sur le socket %d\n", reponse[0], socket_fd);
 	return 0;
 //	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
 
@@ -163,13 +187,13 @@ ct_code (void *param)
 		send_request (ct->id, request_id, socket_fd, NULL);
 	}
 
-	int32_t endRequest[5] = {END,-1,-1,-1,-1};
+	int32_t endRequest[5] = {END, -1, -1, -1, -1};
 	endRequest[1] = ct->id;
-	send_request(ct->id,num_request_per_client,socket_fd,endRequest);
+	send_request(ct->id, num_request_per_client, socket_fd, endRequest);
 	printf("thats all for client %d\n", ct->id);
 	thread_running[ct->id] = 0;
 
-	shutdown(socket_fd,0);
+	shutdown(socket_fd, 0);
 	close(socket_fd);
 	pthread_exit (NULL);
 

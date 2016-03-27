@@ -1,11 +1,17 @@
 #include <stdlib.h>
 
 #include "client_thread.h"
+#include <sys/socket.h>
 
 #include <stdint.h>
 
 extern const unsigned int num_clients;
 extern const unsigned int num_resources;
+
+int send_request (int client_id, int request_id, int socket_fd, int32_t *message);
+void initThreadRunning();
+int connectServer();
+
 int
 main (int argc, char *argv[argc + 1])
 {
