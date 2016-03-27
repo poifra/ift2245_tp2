@@ -18,7 +18,7 @@
 
 #include <stdbool.h>
 #include <conf.h>
-
+#include <pthread.h>
 
 // Variable obtenue de /conf.c
 
@@ -64,6 +64,9 @@ unsigned int clients_ended = 0;
 unsigned int num_clients;
 
 int* client_sockets;
+
+pthread_mutex_t banker_lock;
+
 void error(const char *msg)
 {
 	perror(msg);
@@ -117,15 +120,18 @@ int st_execute_banker(int cid, int *req){
         int i;
         int valid = 1;
         int enough = 1;
-        for(i = 0; i < num_resources; i++){
+        pthread_mutex_lock(&banker_lock);
+        for(i = 0; i < num_resources && valid && enough; i++){
                 valid = valid && (- req[i]) <= need[cid][i]//Le client ne demande pas plus que ce qu'il peut
                         && req[i] <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
                 enough = enough && (- req[i]) <= available[i];
         }
         if(!valid){
+                pthread_mutex_unlock(&banker_lock);
                 return -1;//refuse
         }
         else if(!enough) {
+                pthread_mutex_unlock(&banker_lock);
                 return 0;//wait
         } else {
                 //calcul du nouvel état 
@@ -144,8 +150,8 @@ int st_execute_banker(int cid, int *req){
         }
         for(i = 0; i < num_clients && safe; i++){
                 safe = 1;
-                //safe = need[i] < work
-                for(j = 0; j < num_resources; j++){
+                //safe = need[i] <= work
+                for(j = 0; j < num_resources && safe; j++){
                         safe = safe && need[i][j] <= work[j];
                 }
                 if(safe){
@@ -163,6 +169,7 @@ int st_execute_banker(int cid, int *req){
                 }
         }
 
+        pthread_mutex_unlock(&banker_lock);
         return safe;
 }
 
@@ -190,7 +197,7 @@ st_process_request (server_thread *st, int socket_fd)
 	printf("le serveur reçoit %d %d %d %d %d sur le socket %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], socket_fd);
 
 	int32_t reponse[2];
-	int waiting_time = 10;//temps d'attente en secondes.
+	int waiting_time = 5;//temps d'attente en secondes.
 	switch (msg[0])
 	{
 	case END:
@@ -381,7 +388,7 @@ st_print_results (FILE * fd, bool verbose)
 	{
 		fprintf (fd, "\n---- Résultat du serveur ----\n");
 		fprintf (fd, "Requêtes acceptées: %d\n", count_accepted);
-		fprintf (fd, "Requêtes : %d\n", count_on_wait);
+		fprintf (fd, "Requêtes misent en attente: %d\n", count_on_wait);
 		fprintf (fd, "Requêtes invalides: %d\n", count_invalid);
 		fprintf (fd, "Clients : %d\n", count_dispatched);
 		fprintf (fd, "Requêtes traitées: %d\n", request_processed);
