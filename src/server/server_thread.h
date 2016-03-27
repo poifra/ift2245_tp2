@@ -15,6 +15,7 @@ struct server_thread
 {
   unsigned int id;
   pthread_t pt_tid;
+  int fini;
   pthread_attr_t pt_attr;
 };
 

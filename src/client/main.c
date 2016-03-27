@@ -11,6 +11,7 @@ main (int argc, char *argv[argc + 1])
 {
 
   initThreadRunning();
+
   int32_t *theMotherOfAllRequests = malloc(sizeof(int32_t)*5);
   if (theMotherOfAllRequests == NULL)
   {
@@ -24,23 +25,21 @@ main (int argc, char *argv[argc + 1])
   theMotherOfAllRequests[3] = -1;
   theMotherOfAllRequests[4] = -1;
 
-
-  if(send_request(0,0,0,theMotherOfAllRequests) == -1)
+  int begin_fd = connectServer();  
+  if(send_request(0,0,begin_fd,theMotherOfAllRequests) == -1)
   {
     printf("The server said screw you\n");
     exit(-1);
   }
 
-  client_thread client_threads[num_clients];
+  shutdown(begin_fd,0);
+  close(begin_fd);
+
+  client_thread client_threads[NUM_CLIENTS];
 
   for (unsigned int i = 0; i < num_clients; i++)
     {
       ct_init (&(client_threads[i]));
-    }
-
-  for (unsigned int i = 0; i < num_clients; i++)
-    {
-      ct_create_and_start (&(client_threads[i]));
     }
 
   ct_wait_server ();

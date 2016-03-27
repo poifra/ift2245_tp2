@@ -71,29 +71,8 @@ void error(const char *msg)
 }
 
 void
-st_init ()
+st_init_banquier ()
 {
-	struct sockaddr_in thread_addr;
-	socklen_t socket_len = sizeof (thread_addr);
-	int socket_fd = -1;
-	int start = time (NULL);
-
-	// Boucle jusqu'à ce que accept recoive la première connection.
-	while (socket_fd < 0)
-	{
-		socket_fd =
-		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
-		            &socket_len);
-
-		if ((time (NULL) - start) >= max_wait_time)
-		{
-			printf ("Time out on thread while waiting for begin.\n");
-			pthread_exit (NULL);
-		}
-	}
-	st_process_request(NULL, socket_fd); //on traite le begin
-
-
 	//initialisation des structures de donnée
 	int i, j;
 	int count = num_server_threads;
@@ -137,6 +116,7 @@ int st_execute_banker(int cid, int *req) {
 	int safe = 1;
 	int work[num_resources];
 
+	/*
 	for (i = 0; i < num_resources; i++) {
 		valid = valid && req[i] < need[cid][i];
 		enough = enough && req[i] < available[i];
@@ -171,7 +151,7 @@ int st_execute_banker(int cid, int *req) {
 			}
 		}
 	}
-
+*/
 	return safe;
 
 }
@@ -188,8 +168,7 @@ st_process_request (server_thread *st, int socket_fd)
 	{
 		rc = read(socket_fd, data + size - remaining, remaining);
 
-		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
-		       data, &msg, data + size - remaining, size, remaining, rc);
+	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &msg, data + size - remaining, size, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on read");
@@ -197,10 +176,11 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 	}
 	msg = (int *) data;
-	size = sizeof(int32_t) * 2;
+
+	printf("le serveur a recu %d sur le socket %d\n", msg[0], socket_fd);
+
 	int32_t reponse[2];
 	int waiting_time = 10;//temps d'attente en secondes.
-	int close_socket = 0;
 	switch (msg[0])
 	{
 	case END:
@@ -208,11 +188,12 @@ st_process_request (server_thread *st, int socket_fd)
 		clients_ended++;
 		reponse[0] = ACK;
 		reponse[1] = -1;
-		close_socket = 1;
+		st->fini = 1;
 		break;
 	case REQ:
 		request_processed++;
 		printf("REQ recu\n");
+		printf("msg[1] cid = %d\n",msg[1]);
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
 			reponse[0] = ACK;
@@ -234,6 +215,7 @@ st_process_request (server_thread *st, int socket_fd)
 			error("Invalid number of resources declared by client");
 		}
 		num_clients = msg[2];
+		num_server_threads = num_clients;
 		reponse[0] = ACK;
 		reponse[1] = -1;
 		break;
@@ -251,22 +233,21 @@ st_process_request (server_thread *st, int socket_fd)
 
 	char *response_data;
 	response_data = (char *) reponse;
+	size = sizeof(int32_t) * 2;
 	remaining = size;
 	rc = 0;
 	while (remaining) {
 
-		rc = write(socket_fd, data + size - remaining, remaining);
-		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, remaining, rc);
+		rc = write(socket_fd, response_data + size - remaining, remaining);
+	//	printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, size, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on write");
 		}
 		remaining -= rc;
-		printf("next round %d\n", remaining);
 	}
-	if (close_socket) {
-		close(socket_fd);
-	}
+
+	printf("le serveur a répondu %d sur le socket %d\n", reponse[0], socket_fd);
 
 }
 
@@ -282,10 +263,34 @@ st_signal ()
 }
 
 
+void st_wait_begin()
+{
+	struct sockaddr_in thread_addr;
+	socklen_t socket_len = sizeof (thread_addr);
+	int socket_fd = -1;
+	int start = time (NULL);
+
+	// Boucle jusqu'à ce que accept recoive la première connection.
+	while (socket_fd < 0)
+	{
+		socket_fd =
+		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
+		            &socket_len);
+
+		if ((time (NULL) - start) >= max_wait_time)
+		{
+			printf ("Time out on thread while waiting for begin.\n");
+			pthread_exit (NULL);
+		}
+	}
+	st_process_request(NULL, socket_fd); //on traite le begin
+
+}
 void *
 st_code (void *param)
 {
 	server_thread *st = (server_thread *) param;
+	st->fini = 0;
 
 	struct sockaddr_in thread_addr;
 	socklen_t socket_len = sizeof (thread_addr);
@@ -298,41 +303,30 @@ st_code (void *param)
 		thread_socket_fd =
 		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
 		            &socket_len);
-		if (thread_socket_fd > 0)
-		{
-			num_clients++;
-			st_process_request(st, thread_socket_fd);
-		}
 		if ((time (NULL) - start) >= max_wait_time)
 		{
-			fprintf (stderr, "Time out on thread %d.\n", st->id);
-			//	pthread_exit (NULL);
+			fprintf (stderr, "Time out no connect on thread %0x.\n", st->pt_tid);
+			pthread_exit (NULL);
+			//TODO : flag fin thread
 		}
 	}
 
 
 	// Boucle de traitement des requêtes
-	// Boucle tant qu'il reste des clients qui n'ont pas envoyé END
-	while (clients_ended < num_clients)
-	{
-		if ((time (NULL) - start) >= max_wait_time)
-		{
-			fprintf (stderr, "Time out on thread %d.\n", st->id);
-			pthread_exit (NULL);
-		}
-		if (thread_socket_fd > 0)
-		{
-			st_process_request (st, thread_socket_fd);
-			//	close (thread_socket_fd);
-		}
-		thread_socket_fd =
-		    accept (server_socket_fd, (struct sockaddr *) &thread_addr,
-		            &socket_len);
+	// Boucle tant que pas de end
+	while (!st->fini && (time (NULL) - start) <= max_wait_time){
+		st_process_request (st, thread_socket_fd);
 	}
 
+	if (!st->fini){
+		fprintf (stderr, "Time out no request on thread %d.\n", st->id);
+	}
+	printf("fin pt_tid %0x\n",st->pt_tid);
+	shutdown(thread_socket_fd,SHUT_RDWR);
+	close(thread_socket_fd);
+	pthread_exit (NULL);
+
 }
-
-
 //
 // Ouvre un socket pour le serveur. Vous devrez modifier ce code.
 //

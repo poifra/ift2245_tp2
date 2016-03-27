@@ -60,8 +60,6 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 {
 	int32_t *msg;
 	int size = sizeof(int32_t)*5;
-	if (socket_fd == 0)
-		socket_fd = getSocketDescriptor();
 
 	if (message == NULL)
 	{
@@ -70,7 +68,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			error("mourru");
 		}
 		msg[0] = REQ;
-		msg[1] = 5; //TODO: set real values
+		msg[1] = client_id; //TODO: set real values
 		msg[2] = 4;
 		msg[3] = 3;
 		msg[4] = 2;
@@ -79,7 +77,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		msg = message;
 	}
 
-	printf("msg[0] client %d\n",msg[0]);
+	//printf("msg[0] client %d\n",msg[0]);
 
 	char *data = (char *) msg;
 	int remaining = size;
@@ -87,13 +85,15 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	while (remaining)
 	{
 		rc = write(socket_fd, data + size - remaining, remaining);
-		printf("client %d request %d write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
+//		printf("client %d request %d write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("client error on write");
 		}
 		remaining -= rc;
 	}
 	request_sent++;
+
+	printf("le client envoie %d sur le socket %d\n", msg[0], socket_fd);
 
 	size = 2*sizeof(int32_t);
 	int32_t *reponse = malloc(size);
@@ -107,19 +107,21 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + size - remaining, remaining);
-		printf("client %d request %d read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
+//		printf("client %d request %d read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			printf("client %d requete %d va pas bien :(\n",client_id, request_id);
 			error("client error on read");
 		}
 		remaining -= rc;
 	}
+
+	printf("le serveur a repondu %d sur le socket %d\n",reponse[0], socket_fd);
 	return 0;
 //	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
 
 }
 
-int getSocketDescriptor()
+int connectServer()
 {
 	int socket_fd;
 	struct sockaddr_in servAddr;
@@ -145,24 +147,30 @@ int getSocketDescriptor()
 	if (connect(socket_fd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
 		error("error connecting");
 	}
-	printf("socket descriptor gave socket %d\n", socket_fd);
+//	printf("socket descriptor gave socket %d\n", socket_fd);
 	return socket_fd;
 }
 
 void *
 ct_code (void *param)
 {
-	int socket_fd = getSocketDescriptor();
+	int socket_fd = connectServer();
 	client_thread *ct = (client_thread *) param;
 
-	int request_id = 0;
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
 		printf("client %d sending request %d\n", ct->id, request_id);
 		send_request (ct->id, request_id, socket_fd, NULL);
 	}
+
+	int32_t endRequest[5] = {END,-1,-1,-1,-1};
+	endRequest[1] = ct->id;
+	send_request(ct->id,num_request_per_client,socket_fd,endRequest);
 	printf("thats all for client %d\n", ct->id);
 	thread_running[ct->id] = 0;
+
+	shutdown(socket_fd,0);
+	close(socket_fd);
 	pthread_exit (NULL);
 
 }
@@ -200,17 +208,11 @@ ct_init (client_thread * ct)
 {
 	ct->id = count++;
 	thread_running[ct->id] = 1;
-}
-
-void
-ct_create_and_start (client_thread * ct)
-{
 	pthread_attr_init (&(ct->pt_attr));
 	pthread_create (&(ct->pt_tid), &(ct->pt_attr), &ct_code, ct);
 	pthread_detach (ct->pt_tid);
 }
 
-//
 // Affiche les données recueillies lors de l'exécution du
 // serveur.
 // La branche else ne doit PAS être modifiée.

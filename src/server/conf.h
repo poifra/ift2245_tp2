@@ -9,7 +9,7 @@ extern const int port_number;
 
 // Server configuration
 extern const unsigned int num_resources;
-extern const unsigned int num_server_threads;
+extern unsigned int num_server_threads;
 extern const unsigned int max_wait_time;
 extern const unsigned int server_backlog_size;
 extern const unsigned int available_resources[NUM_RESOURCES];
