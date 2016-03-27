@@ -130,10 +130,55 @@ st_init ()
 	// END TODO
 }
 
+int st_execute_banker(int cid, int *req){        
+        int i;
+        int valid = 1;
+        int enough = 1;
+        for(i = 0; i < num_resources; i++){
+                valid = valid && req[i] < need[i];
+                enough = enough && req[i] < available[i];
+        }
+        if(!valid){
+                return -1;//refuse
+        }
+        else if(!enough) {
+                return 0;//wait
+        } else {
+                //calcul du nouvel état 
+                for(i = 0; i < num_resources; i++){
+                        available[i] -= req[i];
+                        allocation[cid][i] += req[i];
+                }
+        }
+        //vérification du nouvel état
+        int j;
+        int safe = 1;
+        int work[num_resources];
+        for(i = 0; i < num_resources; i++){
+                work[i] = available[i];
+        }
+        for(i = 0; i < num_clients && safe; i++){
+                safe = 1;
+                //safe = need[i] < work
+                for(j = 0; j < num_resources; i++){
+                        safe = safe && need[i][j] <= work[j];
+                }
+                if(safe){
+                        //work += allocation[i]
+                        for(j = 0; j < num_resources; j++){
+                                work[j] += allocation[i][j];
+                        }
+                }
+        }
+
+        return safe;
+               
+}
+
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	int size = sizeof(int) * 5;
+	int size = sizeof(int) * (num_resources + 2);//La taille maximale d'un message est 2 de plus que le nombre de ressources
 	char data[size];
         int *msg;
 	int remaining = size;
@@ -151,37 +196,58 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 	}
         msg = (int *) data;
+        size = sizeof(int32_t) * 2;
+	int32_t reponse[2];
+        int waiting_time = 10;//temps d'attente en secondes.
+        int close = 0;
 	switch (msg[0])
 	{
 	case END:
 		printf("END recu\n");
 		clients_ended++;
-		close(socket_fd);
+                reponse[0] = ACK;
+                reponse[1] = -1;       
+		close = 1;
 		break;
 	case REQ:
 		request_processed++;
 		printf("REQ recu\n");
+                switch(st_execute_banker(msg[1],msg[2])){
+                case 1:
+                        reponse[0] = ACK;
+                        reponse[1] = -1;
+                        break;
+                case -1:
+                        reponse[0] = REFUSE;
+                        reponse[1] = -1;
+                        break;
+                case 0:
+                        reponse[0] = WAIT;
+                        reponse[1] = waiting_time;
+                        break;
+                }
 		break;
 	case BEGIN:
 		printf("BEGIN recu\n");                
                 if(num_resources != msg[1])
                         error("Invalid number of resources declared by client");
-                num_clients = msg[2];                
+                num_clients = msg[2];
+                reponse[0] = ACK;
+                reponse[1] = -1;       
 		break;
 	case INIT:
                 printf("INIT recu\n");
 		request_processed++;
+                reponse[0] = ACK;
+                reponse[1] = -1;       
 		break;
 	default:
 		printf("lolnope msg[0] is %d \n",msg[0]);
 		break;
 	}
 
-	size = sizeof(int32_t) * 2;
-	int32_t reponse[2];
-        char *response_data;
-	reponse[0] = ACK;
-	reponse[1] = -1;       
+        
+        char *response_data;	
 	response_data = (char *) reponse;
 	remaining = size;
 	rc = 0;
@@ -196,7 +262,9 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 		printf("next round %d\n", remaining);
 	}
-
+        if(close)
+                close(socket_fd);                
+        
 }
 
 
