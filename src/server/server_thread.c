@@ -97,8 +97,7 @@ st_init ()
 	//initialisation des structures de donnée
 	int i, j;
 	int count = num_server_threads;
-	bool safe = false;
-	
+
 	available = malloc(num_resources * sizeof(int));
 	allocation = malloc(num_clients * sizeof(int*));
 	max = malloc(num_clients * sizeof(int*));
@@ -125,7 +124,6 @@ st_init ()
                                                 
         }
 
-        //	*/
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -134,6 +132,7 @@ st_init ()
 
 	// END TODO
 }
+
 
 int st_execute_banker(int cid, int *req){        
         int i;
@@ -184,7 +183,6 @@ int st_execute_banker(int cid, int *req){
         }
 
         return safe;
-               
 }
 
 void
@@ -192,7 +190,7 @@ st_process_request (server_thread *st, int socket_fd)
 {
 	int size = sizeof(int) * (num_resources + 2);//La taille maximale d'un message est 2 de plus que le nombre de ressources
 	char data[size];
-        int *msg;
+	int *msg;
 	int remaining = size;
 	int rc;
 	while (remaining)
@@ -207,66 +205,67 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
-        msg = (int *) data;
-        size = sizeof(int32_t) * 2;
+	msg = (int *) data;
+	size = sizeof(int32_t) * 2;
 	int32_t reponse[2];
-        int waiting_time = 10;//temps d'attente en secondes.
-        int close_socket = 0;
+	int waiting_time = 10;//temps d'attente en secondes.
+	int close_socket = 0;
 	switch (msg[0])
 	{
 	case END:
 		printf("END recu\n");
 		clients_ended++;
-                reponse[0] = ACK;
-                reponse[1] = -1;       
+		reponse[0] = ACK;
+		reponse[1] = -1;
 		close_socket = 1;
 		break;
 	case REQ:
 		request_processed++;
 		printf("REQ recu\n");
-                switch(st_execute_banker(msg[1],msg+2)){
-                case 1:
-                        reponse[0] = ACK;
-                        reponse[1] = -1;
-                        break;
-                case -1:
-                        reponse[0] = REFUSE;
-                        reponse[1] = -1;
-                        break;
-                case 0:
-                        reponse[0] = WAIT;
-                        reponse[1] = waiting_time;
-                        break;
-                }
+		switch (st_execute_banker(msg[1], msg + 2)) {
+		case 1:
+			reponse[0] = ACK;
+			reponse[1] = -1;
+			break;
+		case -1:
+			reponse[0] = REFUSE;
+			reponse[1] = -1;
+			break;
+		case 0:
+			reponse[0] = WAIT;
+			reponse[1] = waiting_time;
+			break;
+		}
 		break;
 	case BEGIN:
-		printf("BEGIN recu\n");                
-                if(num_resources != msg[1])
-                        error("Invalid number of resources declared by client");
-                num_clients = msg[2];
-                reponse[0] = ACK;
-                reponse[1] = -1;       
+		printf("BEGIN recu\n");
+		if (num_resources != msg[1]) {
+			error("Invalid number of resources declared by client");
+		}
+		num_clients = msg[2];
+		reponse[0] = ACK;
+		reponse[1] = -1;
 		break;
 	case INIT:
-                printf("INIT recu\n");
+		printf("INIT recu\n");
 		request_processed++;
-                reponse[0] = ACK;
-                reponse[1] = -1;       
+		reponse[0] = ACK;
+		reponse[1] = -1;
 		break;
 	default:
-		printf("lolnope msg[0] is %d \n",msg[0]);
+		printf("lolnope msg[0] is %d \n", msg[0]);
 		break;
 	}
 
-        
-        char *response_data;	
+
+	char *response_data;
 	response_data = (char *) reponse;
 	remaining = size;
 	rc = 0;
 	while (remaining) {
 
 		rc = write(socket_fd, data + size - remaining, remaining);
-		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &reponse, data + size - remaining, remaining, rc);
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on write");
@@ -274,9 +273,10 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 		printf("next round %d\n", remaining);
 	}
-        if(close_socket)
-                close(socket_fd);                
-        
+	if (close_socket) {
+		close(socket_fd);
+	}
+
 }
 
 
@@ -350,7 +350,7 @@ st_open_socket ()
 {
 	server_socket_fd = socket (AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (server_socket_fd < 0) {
-		perror ("ERROR opening socket");
+		error ("ERROR opening socket");
 	}
 
 	struct sockaddr_in serv_addr;
@@ -362,7 +362,7 @@ st_open_socket ()
 	if (bind
 	        (server_socket_fd, (struct sockaddr *) &serv_addr,
 	         sizeof (serv_addr)) < 0) {
-		perror ("ERROR on binding");
+		error ("ERROR on binding");
 	}
 
 	listen (server_socket_fd, server_backlog_size);
