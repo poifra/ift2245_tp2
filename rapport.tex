@@ -1,15 +1,140 @@
-\documentclass{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Based on a TeXnicCenter-Template, which was             %%
+%% created by Christoph Börensen                           %%
+%% and slightly modified by Tino Weinkauf.                 %%
+%%                                                         %%
+%% Then, a third guy - me - put in some modifications.     %%
+%%                                                         %%
+%% IFT2245 - Rapport TP1                                   %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\usepackage[utf8]{inputenc}
+\documentclass[letterpaper,12pt]{scrartcl}
+% Optimised for letter. Add ",twosides" to use the two-sides layout.
 
-\title{Travail pratique \#1 - IFT-2245}
-\author{Moi et L'autre}
+% Margins
+    \usepackage{vmargin}
+    \setpapersize{USletter}
+    \setmargins{2.0cm}%	 % Left edge
+               {1.5cm}%  % Top edge
+               {17.7cm}% % Text width
+               {21.0cm}% % Text height
+               {14pt}%	 % Header height
+               {1cm}%    % Header distance
+               {0pt}%	 % Footer height
+               {2cm}%    % Footer distance
+				
+% Graphical bugfix (about footnotes)
+    \usepackage[bottom]{footmisc}
+
+% Fonts and locale
+	\usepackage{t1enc}
+	\usepackage[utf8]{inputenc}
+	\usepackage{times}
+	\usepackage[francais]{babel}
+	\usepackage{amsmath}
+
+	\AtBeginDocument {%
+	    \renewcommand\tablename{\textsc{Tableau}}
+	}
+
+% Graphics
+	\usepackage[pdftex]{graphicx}
+	\usepackage{color}
+	\usepackage{eso-pic}
+	\usepackage{everyshi}
+	\renewcommand{\floatpagefraction}{0.7}
+
+% Enable hyperlinks
+	\usepackage[pdftex=true]{hyperref}
+	
+% Table layout
+	\usepackage{booktabs}
+
+% Caption
+	\usepackage{ccaption}
+	\captionnamefont{\bf\footnotesize\sffamily}
+	\captiontitlefont{\footnotesize\sffamily}
+	\setlength{\abovecaptionskip}{0mm}
+
+% Header and footer settings
+	\usepackage{scrpage2} 
+	\renewcommand{\headfont}{\footnotesize\sffamily}
+	\renewcommand{\pnumfont}{\footnotesize\sffamily}
+
+% Pagestyles
+	\defpagestyle{cb}{
+		(\textwidth,0pt) % Sets the border line above the header
+		{\pagemark\hfill\headmark\hfill} % Doublesided, left page
+		{\hfill\headmark\hfill\pagemark} % Doublesided, right page
+		{\hfill\headmark\hfill\pagemark} % Onesided
+		(\textwidth,1pt)} % Sets the border line below the header
+		{(\textwidth,1pt) % Sets the border line above the footer
+		{{\it Rapport TP1 (IFT2245)}\hfill Sulliman Aïad et François Poitras} % Doublesided, left page
+		{Charles Langlois et François Poitras\hfill{\it Rapport TP1 (IFT2245)}} % Doublesided, right page
+		{Charles Langlois et François Poitras\hfill{\it Rapport TP1 (IFT2245)}} % One sided printing
+		(\textwidth,0pt) % Sets the border line below the footer
+	}
+
+% Empty pages style
+	\renewpagestyle{plain}
+		{(\textwidth,0pt)
+			{\hfill}{\hfill}{\hfill}
+		(\textwidth,0pt)}
+		{(\textwidth,0pt)
+			{\hfill}{\hfill}{\hfill}
+		(\textwidth,0pt)}
+
+% Footnotes
+	\renewcommand{\footnoterule}{\rule{5cm}{0.2mm} \vspace{0.3cm}}
+	\deffootnote[1em]{1em}{1em}{\textsuperscript{\normalfont\thefootnotemark}}
+
+\pagestyle{plain}
 
 \begin{document}
+	\begin{center}
+		\vspace{2cm}
 
-\maketitle
+		{\Huge\bf\sf Rapport du Travail Pratique 2}
 
-allo comment ça va?
+		\vspace{0.5cm}
+
+		{\bf\sf (TP1)}
+
+		\vspace{4cm}
+
+		{\bf\sf Par}
+
+		\vspace{0.5cm}{\large\bf\sf Charles Langlois et François Poitras}
+
+		\vspace{2cm}
+
+		{\bf\sf Rapport présenté à}
+
+		\vspace{0.5cm}{\large\bf\sf M. Stefan Monnier}
+
+		\vspace{2cm}
+
+		{\bf\sf Dans le cadre du cours de}
+
+		\vspace{0.5cm}{\large\bf\sf Systèmes d'exploitation (IFT2245)}
+
+		\vspace{\fill}
+		\today
+
+		\vspace{0.5cm}Université de Montréal
+	\end{center}
+	
+	\newpage
+
+	\pagestyle{cb}
+	
+	\tableofcontents
+
+	\newpage
+\section{Fonctionnement du programme}
+\section{Gestion des deadlocks}
+\section{Prévention de la corruption}
+\section{Synchronisation de la fin de l'éxecution}
 %% ¡¡ REMPLIR ICI !!
 
 \end{document}
