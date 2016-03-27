@@ -70,7 +70,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			error("mourru");
 		}
 		msg[0] = REQ;
-		msg[1] = 5; //TODO: set real values
+		msg[1] = client_id; //TODO: set real values
 		msg[2] = 4;
 		msg[3] = 3;
 		msg[4] = 2;

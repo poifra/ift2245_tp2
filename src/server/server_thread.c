@@ -100,7 +100,7 @@ st_init ()
 	bool safe = false;
 	
 	available = malloc(num_resources * sizeof(int));
-	allocation = malloc(num_resources * sizeof(int*));
+	allocation = malloc(num_clients * sizeof(int*));
 	max = malloc(num_clients * sizeof(int*));
 	need = malloc(num_clients * sizeof(int*));
 	if (available == NULL || allocation == NULL || max == NULL || need == NULL) {
@@ -108,18 +108,23 @@ st_init ()
 	}
 	for (i = 0; i < num_resources; i++) {
                 available[i] = *(available_resources+i);
-		allocation[i] = malloc(num_resources * sizeof(int));
-		max[i] = malloc(num_resources * sizeof(int));
-		need[i] = malloc(num_resources * sizeof(int));
-		if (allocation[i] == NULL || max[i] == NULL || need[i] == NULL) {
+	}
+        
+        for (j = 0; j < num_clients; j++) {
+                allocation[j] = malloc(num_resources * sizeof(int));
+		max[j] = malloc(num_resources * sizeof(int));
+		need[j] = malloc(num_resources * sizeof(int));
+		if (allocation[j] == NULL || max[j] == NULL || need[j] == NULL) {
 			error("null pointer exception");
 		}
-		for (j = 0; j < num_clients; j++) {
-			allocation[i][j] = 0;
-			max[i][j] = 0;
-			need[i][j] = 0;
-		}
-	}
+                for (i = 0; i < num_resources; i++) {
+                        allocation[j][i] = 0;
+                        max[j][i] = 0;
+                        need[j][i] = 0;
+                }
+                                                
+        }
+
         //	*/
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
@@ -168,6 +173,13 @@ int st_execute_banker(int cid, int *req){
                         for(j = 0; j < num_resources; j++){
                                 work[j] += allocation[i][j];
                         }
+                }
+        }
+        if(!safe){
+                //rollback
+                for(i = 0; i < num_resources; i++){
+                        available[i] += req[i];
+                        allocation[cid][i] -= req[i];
                 }
         }
 
