@@ -19,8 +19,8 @@ main (int argc, char *argv[argc + 1])
   }
 
   theMotherOfAllRequests[0] = BEGIN;
-  theMotherOfAllRequests[1] = num_clients;
-  theMotherOfAllRequests[2] = num_resources;
+  theMotherOfAllRequests[1] = num_resources;
+  theMotherOfAllRequests[2] = num_clients;
   theMotherOfAllRequests[3] = -1;
   theMotherOfAllRequests[4] = -1;
 
