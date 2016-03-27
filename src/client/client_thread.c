@@ -76,7 +76,6 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		msg[4] = 2;
 	}
 	else {
-		printf("else\n");
 		msg = message;
 	}
 
@@ -88,7 +87,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	while (remaining)
 	{
 		rc = write(socket_fd, data + size - remaining, remaining);
-		printf("write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
+		printf("client %d request %d write data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd, data, &msg, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
 			error("client error on write");
 		}
@@ -108,8 +107,9 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + size - remaining, remaining);
-		printf("read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
+		printf("client %d request %d read data socket %d :%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", client_id, request_id, socket_fd,data, &reponse, data + size - remaining, size, remaining, rc);
 		if (rc < 0) {
+			printf("client %d requete %d va pas bien :(\n",client_id, request_id);
 			error("client error on read");
 		}
 		remaining -= rc;
