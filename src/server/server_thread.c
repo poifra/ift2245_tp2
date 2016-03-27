@@ -118,9 +118,9 @@ int st_execute_banker(int cid, int *req){
         int valid = 1;
         int enough = 1;
         for(i = 0; i < num_resources; i++){
-                valid = valid && (- req[i]) < need[cid][i]//Le client ne demande pas plus que ce qu'il peut
-                        && (- req[i]) <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
-                enough = enough && (- req[i]) < available[i];
+                valid = valid && (- req[i]) <= need[cid][i]//Le client ne demande pas plus que ce qu'il peut
+                        && req[i] <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
+                enough = enough && (- req[i]) <= available[i];
         }
         if(!valid){
                 return -1;//refuse
