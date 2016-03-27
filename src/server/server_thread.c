@@ -115,6 +115,22 @@ st_init_banquier ()
 	// END TODO
 }
 
+int st_init_client(int cid, int32_t *client_max){
+        int i;
+        int response = 1;
+        pthread_mutex_lock(&banker_lock);
+        for(i = 0; i < num_resources && response; i++){
+                if(client_max[i] > available[i])
+                        response = 0;
+                else {
+                        max[cid][i] = client_max[i];
+                        need[cid][i] = max[cid][i] - allocation[cid][i];
+                }
+        }
+        pthread_mutex_unlock(&banker_lock);
+        return response;
+}
+
 //kill the banker
 int st_execute_banker(int cid, int *req){        
         int i;
@@ -178,7 +194,7 @@ st_process_request (server_thread *st, int socket_fd)
 {
 	int size = sizeof(int) * (num_resources + 2);//La taille maximale d'un message est 2 de plus que le nombre de ressources
 	char data[size];
-	int *msg;
+	int32_t *msg;
 	int remaining = size;
 	int rc;
 	while (remaining)
@@ -192,7 +208,7 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
-	msg = (int *) data;
+	msg = (int32_t *) data;
 
 	printf("le serveur reçoit %d %d %d %d %d sur le socket %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], socket_fd);
 
@@ -211,6 +227,9 @@ st_process_request (server_thread *st, int socket_fd)
 		request_processed++;
 		printf("REQ recu\n");
 		printf("msg[1] cid = %d\n", msg[1]);
+                if(!(msg[1] < num_clients)){
+                        error("invalid client id");
+                }
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
                         count_accepted++;
@@ -233,17 +252,32 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("BEGIN recu\n");
 		if (num_resources != msg[1]) {
 			error("Invalid number of resources declared by client");
-		}
-		num_clients = msg[2];
-		num_server_threads = num_clients;
-		reponse[0] = ACK;
-		reponse[1] = -1;
+		} else {
+                        num_clients = msg[2];
+                        num_server_threads = num_clients;
+                        reponse[0] = ACK;
+                        reponse[1] = -1;
+                }
 		break;
 	case INIT:
 		printf("INIT recu\n");
 		request_processed++;
-		reponse[0] = ACK;
-		reponse[1] = -1;
+                if(!(msg[1] < num_clients)){
+                        error("invalid client id");
+                } else {
+                        switch(st_init_client(msg[1], msg+2)){
+                        case 0:
+                                reponse[0] = REFUSE;
+                                reponse[1] = -1;
+                                break;
+                        case 1:
+                                reponse[0] = ACK;
+                                reponse[1] = -1;
+                                break;
+                                
+                        }
+                }
+		
 		break;
 	default:
 		printf("lolnope msg[0] is %d \n", msg[0]);

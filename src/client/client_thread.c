@@ -130,16 +130,18 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	case ACK:
 		if(msg[0]==END)
 			count_dispatched++;
-		else
+		else if(msg[0] == INIT || msg[0] == REQ)
 			count_accepted++;
 		break;
 	case WAIT:
 		count_on_wait++;
+                sleep(reponse[1]);
+                //Try again
 		break;
 	default:
 		printf("code de reponse inconnu %d\n", reponse[0]);
 	}
-	printf("le serveur a repondu %d sur le socket %d\n", reponse[0], socket_fd);
+	printf("le serveur a repondu %d sur le socket %d\n", (p_msg) reponse[0], socket_fd);
 	return 0;
 //	fprintf(stdout,"response: message_code %d replied to client %d request %d \n", reponse.message_code, reponse.clientId, reponse.reqId);
 
@@ -180,7 +182,13 @@ ct_code (void *param)
 {
 	int socket_fd = connectServer();
 	client_thread *ct = (client_thread *) param;
-
+        int32_t init_message[num_resources+2];
+        init_message[0] = INIT;
+        init_message[1] = ct->id;
+        for(int i = 0; i < num_resources; i++){
+                init_message[i+2] = max_resources_per_client[ct->id][i];
+        }
+        send_request (ct->id, -1, socket_fd, init_message);//INIT
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
 		printf("client %d sending request %d\n", ct->id, request_id);
