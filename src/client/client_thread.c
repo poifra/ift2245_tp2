@@ -74,6 +74,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		int32_t freeOrGet = 0;
 		int32_t amount = 0;
 		//choose random values to ask or release
+		srand(time(NULL));
 		for(int i = 2; i < num_clients; i++)
 		{
 			freeOrGet = rand() % 2 ? -1 : 1;
@@ -134,6 +135,8 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			count_accepted++;
 		break;
 	case WAIT:
+		sleep(reponse[1]);
+		send_request (client_id, request_id, socket_fd, msg);
 		count_on_wait++;
 		break;
 	default:
@@ -251,7 +254,7 @@ st_print_results (FILE * fd, bool verbose)
 	{
 		fprintf (fd, "\n---- Résultat du client ----\n");
 		fprintf (fd, "Requêtes acceptées: %d\n", count_accepted);
-		fprintf (fd, "Requêtes : %d\n", count_on_wait);
+		fprintf (fd, "Requêtes wait: %d\n", count_on_wait);
 		fprintf (fd, "Requêtes invalides: %d\n", count_invalid);
 		fprintf (fd, "Clients : %d\n", count_dispatched);
 		fprintf (fd, "Requêtes envoyées: %d\n", request_sent);

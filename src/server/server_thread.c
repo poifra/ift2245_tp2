@@ -102,68 +102,61 @@ st_init_banquier ()
 		}
 
 	}
-	//	*/
-	// TODO
-	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
-
-	// Attend la connection d'un client et initialise les structures pour
-	// l'algorithme du banquier.
-
-	// END TODO
 }
 
 //kill the banker
-int st_execute_banker(int cid, int *req){        
-        int i;
-        int valid = 1;
-        int enough = 1;
-        for(i = 0; i < num_resources; i++){
-                valid = valid && (- req[i]) <= need[cid][i]//Le client ne demande pas plus que ce qu'il peut
-                        && req[i] <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
-                enough = enough && (- req[i]) <= available[i];
-        }
-        if(!valid){
-                return -1;//refuse
-        }
-        else if(!enough) {
-                return 0;//wait
-        } else {
-                //calcul du nouvel état 
-                for(i = 0; i < num_resources; i++){
-                        available[i] += req[i];
-                        allocation[cid][i] -= req[i];
-                }
-        }
-        //vérification du nouvel état
-        int j;
-        int safe = 1;
-        int work[num_resources];
-        //Work = available
-        for(i = 0; i < num_resources; i++){
-                work[i] = available[i];
-        }
-        for(i = 0; i < num_clients && safe; i++){
-                safe = 1;
-                //safe = need[i] < work
-                for(j = 0; j < num_resources; j++){
-                        safe = safe && need[i][j] <= work[j];
-                }
-                if(safe){
-                        //work += allocation[i]
-                        for(j = 0; j < num_resources; j++){
-                                work[j] += allocation[i][j];
-                        }
-                }
-        }
-        if(!safe){
-                //rollback
-                for(i = 0; i < num_resources; i++){
-                        available[i] -= req[i];
-                        allocation[cid][i] += req[i];
-                }
-        }
+int st_execute_banker(int cid, int *req) {
+	int i;
+	int valid = 1;
+	int enough = 1;
+	for (i = 0; i < num_resources; i++) {
+		valid = valid && (- req[i]) <= need[cid][i]//Le client ne demande pas plus que ce qu'il peut
+		        && req[i] <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
+		enough = enough && (- req[i]) <= available[i];
+	}
+	if (!valid) {
+		return -1;//refuse
+	}
+	else if (!enough) {
+		return 0;//wait
+	}
+	else {
+		//calcul du nouvel état
+		for (i = 0; i < num_resources; i++) {
+			available[i] += req[i];
+			allocation[cid][i] -= req[i];
+		}
+	}
+	//vérification du nouvel état
+	int j;
+	int safe = 1;
+	int work[num_resources];
+	//Work = available
+	for (i = 0; i < num_resources; i++) {
+		work[i] = available[i];
+	}
+	for (i = 0; i < num_clients && safe; i++) {
+		safe = 1;
+		//safe = need[i] < work
+		for (j = 0; j < num_resources; j++) {
+			safe = safe && need[i][j] <= work[j];
+		}
+		if (safe) {
+			//work += allocation[i]
+			for (j = 0; j < num_resources; j++) {
+				work[j] += allocation[i][j];
+			}
+		}
+	}
+	if (!safe) {
+		//rollback
+		for (i = 0; i < num_resources; i++) {
+			available[i] -= req[i];
+			allocation[cid][i] += req[i];
+		}
+	}
 
-        return safe;
+	return safe;
 }
 
 void
@@ -177,9 +170,6 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining)
 	{
 		rc = read(socket_fd, data + size - remaining, remaining);
-
-		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &msg, data + size - remaining, size, remaining, rc);
-
 		if (rc < 0) {
 			error("server error on read");
 		}
@@ -195,28 +185,27 @@ st_process_request (server_thread *st, int socket_fd)
 	{
 	case END:
 		printf("END recu\n");
-		clients_ended++;
+		count_dispatched++;
 		reponse[0] = ACK;
 		reponse[1] = -1;
 		st->fini = 1;
 		break;
 	case REQ:
-		request_processed++;
 		printf("REQ recu\n");
 		printf("msg[1] cid = %d\n", msg[1]);
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
-                        count_accepted++;
+			count_accepted++;
 			reponse[0] = ACK;
 			reponse[1] = -1;
 			break;
 		case -1:
-                        count_invalid++;
+			count_invalid++;
 			reponse[0] = REFUSE;
 			reponse[1] = -1;
 			break;
 		case 0:
-                        count_on_wait++;
+			count_on_wait++;
 			reponse[0] = WAIT;
 			reponse[1] = waiting_time;
 			break;
@@ -252,8 +241,6 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining) {
 
 		rc = write(socket_fd, response_data + size - remaining, remaining);
-		//	printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, size, remaining, rc);
-
 		if (rc < 0) {
 			error("server error on write");
 		}
@@ -261,7 +248,7 @@ st_process_request (server_thread *st, int socket_fd)
 	}
 
 	printf("le serveur a répondu %d sur le socket %d\n", reponse[0], socket_fd);
-
+	request_processed++;
 }
 
 
