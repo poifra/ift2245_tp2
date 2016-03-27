@@ -135,7 +135,7 @@ int st_execute_banker(int cid, int *req){
         int valid = 1;
         int enough = 1;
         for(i = 0; i < num_resources; i++){
-                valid = valid && req[i] < need[i];
+                valid = valid && req[i] < need[cid][i];
                 enough = enough && req[i] < available[i];
         }
         if(!valid){
@@ -199,7 +199,7 @@ st_process_request (server_thread *st, int socket_fd)
         size = sizeof(int32_t) * 2;
 	int32_t reponse[2];
         int waiting_time = 10;//temps d'attente en secondes.
-        int close = 0;
+        int close_socket = 0;
 	switch (msg[0])
 	{
 	case END:
@@ -207,12 +207,12 @@ st_process_request (server_thread *st, int socket_fd)
 		clients_ended++;
                 reponse[0] = ACK;
                 reponse[1] = -1;       
-		close = 1;
+		close_socket = 1;
 		break;
 	case REQ:
 		request_processed++;
 		printf("REQ recu\n");
-                switch(st_execute_banker(msg[1],msg[2])){
+                switch(st_execute_banker(msg[1],msg+2)){
                 case 1:
                         reponse[0] = ACK;
                         reponse[1] = -1;
@@ -262,7 +262,7 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 		printf("next round %d\n", remaining);
 	}
-        if(close)
+        if(close_socket)
                 close(socket_fd);                
         
 }
