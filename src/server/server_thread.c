@@ -118,8 +118,9 @@ int st_execute_banker(int cid, int *req){
         int valid = 1;
         int enough = 1;
         for(i = 0; i < num_resources; i++){
-                valid = valid && req[i] < need[cid][i];
-                enough = enough && req[i] < available[i];
+                valid = valid && (- req[i]) < need[cid][i]//Le client ne demande pas plus que ce qu'il peut
+                        && (- req[i]) <= allocation[cid][i];//Le client n'essaie pas de libérer plus que ce qu'il possède
+                enough = enough && (- req[i]) < available[i];
         }
         if(!valid){
                 return -1;//refuse
@@ -129,21 +130,22 @@ int st_execute_banker(int cid, int *req){
         } else {
                 //calcul du nouvel état 
                 for(i = 0; i < num_resources; i++){
-                        available[i] -= req[i];
-                        allocation[cid][i] += req[i];
+                        available[i] += req[i];
+                        allocation[cid][i] -= req[i];
                 }
         }
         //vérification du nouvel état
         int j;
         int safe = 1;
         int work[num_resources];
+        //Work = available
         for(i = 0; i < num_resources; i++){
                 work[i] = available[i];
         }
         for(i = 0; i < num_clients && safe; i++){
                 safe = 1;
                 //safe = need[i] < work
-                for(j = 0; j < num_resources; i++){
+                for(j = 0; j < num_resources; j++){
                         safe = safe && need[i][j] <= work[j];
                 }
                 if(safe){
@@ -156,8 +158,8 @@ int st_execute_banker(int cid, int *req){
         if(!safe){
                 //rollback
                 for(i = 0; i < num_resources; i++){
-                        available[i] += req[i];
-                        allocation[cid][i] -= req[i];
+                        available[i] -= req[i];
+                        allocation[cid][i] += req[i];
                 }
         }
 
@@ -204,14 +206,17 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("msg[1] cid = %d\n", msg[1]);
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
+                        count_accepted++;
 			reponse[0] = ACK;
 			reponse[1] = -1;
 			break;
 		case -1:
+                        count_invalid++;
 			reponse[0] = REFUSE;
 			reponse[1] = -1;
 			break;
 		case 0:
+                        count_on_wait++;
 			reponse[0] = WAIT;
 			reponse[1] = waiting_time;
 			break;
