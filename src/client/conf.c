@@ -1,9 +1,10 @@
+#define NO_EXTERN // Prevents the definition of extern.
+#include "conf.h"
+
 // Common configuration
 const int port_number = 2016;
 
 // Client configuration
-#define NUM_CLIENTS 5
-#define NUM_RESOURCES 3
 const unsigned int num_clients = NUM_CLIENTS;
 const unsigned int num_resources = NUM_RESOURCES;
 const unsigned int num_request_per_client = 4;

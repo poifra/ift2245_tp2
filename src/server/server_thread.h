@@ -5,11 +5,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "../../common/protocol.h"
 //POSIX library for threads
 #include <pthread.h>
 #include <unistd.h>
-
-#include "../../common/protocol.h"
 
 typedef struct server_thread server_thread;
 struct server_thread

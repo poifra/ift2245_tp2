@@ -5,8 +5,10 @@
 #include <netdb.h>
 
 #include <strings.h>
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -15,6 +17,8 @@
 #include <time.h>
 
 #include <stdbool.h>
+
+
 
 // Variable obtenue de /conf.c
 extern const int port_number;
@@ -74,42 +78,6 @@ void error(const char *msg)
 	exit(-1);
 }
 
-void begin_request()
-{
-	//uint32_t clientRequest = malloc(2*sizeof(uint32_t));
-	uint32_t clientRequest[3];
-	char *data = (char *) &clientRequest;
-	int remaining = sizeof(clientRequest);
-	int rc;
-	while (remaining)
-	{
-		rc = read(server_socket_fd, data + sizeof(clientRequest) - remaining, remaining);
-		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data,&msg,data + sizeof(msg) - remaining,sizeof(msg),remaining,rc);
-		if (rc < 0) {
-			error("server error on read");
-		}
-		remaining -= rc;
-	}
-
-	if (clientRequest[0] != BEGIN)
-	{
-		error("Error: invalid request from client. Expected 'BEGIN num_resources num_clients'");//requête non valide
-	}
-	else
-	{
-		if (num_resources != clientRequest[1]) {
-			error("Error: number of resources declared by the client invalid");//Erreur
-		}
-		else {
-			num_clients = (int) clientRequest[2];
-			client_sockets = malloc(num_clients * sizeof(int*));
-		}
-
-		//TODO : si le serveur ne peut pas allouer les ressources, il faut répondre refuse
-	}
-}
-
-
 void
 st_init ()
 {
@@ -138,6 +106,7 @@ st_init ()
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
+/*	
 	available = malloc(num_resources * sizeof(int));
 	allocation = malloc(num_resources * sizeof(int*));
 	max = malloc(num_clients * sizeof(int*));
@@ -159,6 +128,7 @@ st_init ()
 			need[i][j] = 0;
 		}
 	}
+	*/
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -171,8 +141,8 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	int size = sizeof(uint32_t) * 5;
-	uint32_t *msg = malloc(size);
+	int size = sizeof(int32_t) * 5;
+	int32_t *msg = malloc(size);
 	if (msg == NULL)
 	{
 		error("pas de mémoire");
@@ -182,7 +152,6 @@ st_process_request (server_thread *st, int socket_fd)
 	int rc;
 	while (remaining)
 	{
-
 		rc = read(socket_fd, data + size - remaining, remaining);
 
 		printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
@@ -207,7 +176,8 @@ st_process_request (server_thread *st, int socket_fd)
 		break;
 	case BEGIN:
 		printf("BEGIN recu\n");
-		num_clients = msg[1];
+	//	num_clients = msg[1];
+	//	num_resources = msg[2];
 		break;
 	case INIT:
 		printf("INIT recu\n");
@@ -217,34 +187,30 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("lolnope msg[0] is %d \n",msg[0]);
 		break;
 	}
-
-	free(msg);
 	msg = NULL;
 
-	size = sizeof(uint32_t) * 2;
-	uint32_t *reponse = malloc(size);
+	size = sizeof(int32_t) * 2;
+	int32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("memoire epuisée");
 	}
 
 	reponse[0] = ACK;
 	reponse[1] = -1;
-	char *reponseBuffer = (char *) reponse;
-
+	data = (char *) reponse;
 	remaining = size;
 	rc = 0;
 	while (remaining) {
 
 		rc = write(socket_fd, data + size - remaining, remaining);
-		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",
-		       data, &msg, data + size - remaining, remaining, rc);
+		printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &reponse, data + size - remaining, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on write");
 		}
 		remaining -= rc;
+		printf("next round %d\n", remaining);
 	}
-	free(reponse);
 	reponse = NULL;
 
 }

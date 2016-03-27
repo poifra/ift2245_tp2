@@ -10,7 +10,8 @@ int
 main (int argc, char *argv[argc + 1])
 {
 
-  uint32_t *theMotherOfAllRequests = malloc(sizeof(uint32_t)*5);
+  initThreadRunning();
+  int32_t *theMotherOfAllRequests = malloc(sizeof(int32_t)*5);
   if (theMotherOfAllRequests == NULL)
   {
     printf("memory is kill\n");

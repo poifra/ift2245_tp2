@@ -5,6 +5,7 @@
 #include <strings.h>
 #include <string.h>
 
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -12,14 +13,6 @@
 #include <netdb.h>
 
 #include "client_thread.h"
-
-
-// Variable de configuration.
-extern const int port_number;
-extern const unsigned int num_clients;
-extern const unsigned int num_resources;
-extern const unsigned int num_request_per_client;
-extern const unsigned int **max_resources_per_client;
 
 // Variable du journal.
 // Nombre de requêtes (REQ envoyés)
@@ -40,15 +33,22 @@ unsigned int count_dispatched = 0;
 // Nombre total de requêtes envoyées.
 unsigned int request_sent = 0;
 
-int thread_running[NUM_CLIENTS];
+int *thread_running;
 
 int getSocketDescriptor();
-int send_request (int client_id, int request_id, int socket_fd, uint32_t *message);
+int send_request (int client_id, int request_id, int socket_fd, int32_t *message);
 
 void error(const char *msg)
 {
 	perror(msg);
 	exit(0);
+}
+
+void initThreadRunning()
+{
+	thread_running = malloc(num_clients*sizeof(int));
+	for (int i = 0; i < num_clients; i++)
+		thread_running[i] = 0;
 }
 // Vous devez modifier cette fonction pour faire l'envoie des requêtes
 // Les ressources demandées par la requête doivent être choisit aléatoirement
@@ -56,10 +56,10 @@ void error(const char *msg)
 // Assurez-vous que la dernière requête d'un client libère toute les ressources qu'il
 // a jusqu'alors accumulées.
 int
-send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
+send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 {
-	uint32_t *msg;
-	int size = sizeof(uint32_t)*5;
+	int32_t *msg;
+	int size = sizeof(int32_t)*5;
 	if (socket_fd == 0)
 		socket_fd = getSocketDescriptor();
 
@@ -96,8 +96,8 @@ send_request (int client_id, int request_id, int socket_fd, uint32_t *message)
 	}
 	request_sent++;
 
-	size = 2*sizeof(uint32_t);
-	uint32_t *reponse = malloc(size);
+	size = 2*sizeof(int32_t);
+	int32_t *reponse = malloc(size);
 	if (reponse == NULL) {
 		error("pas de mémoire pour lire la réponse du serveur");
 	}
@@ -162,7 +162,7 @@ ct_code (void *param)
 		send_request (ct->id, request_id, socket_fd, NULL);
 	}
 	printf("thats all for client %d\n", ct->id);
-	*ct->thread_running = 0;
+	thread_running[ct->id] = 0;
 	pthread_exit (NULL);
 
 }
@@ -200,7 +200,6 @@ ct_init (client_thread * ct)
 {
 	ct->id = count++;
 	thread_running[ct->id] = 1;
-	ct->thread_running  = &thread_running[ct->id];
 }
 
 void
