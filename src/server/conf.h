@@ -1,4 +1,4 @@
-#ifdef SERVERCONF_h
+#ifndef SERVERCONF_h
 #define SERVERCONF_h
 
 #define NUM_RESOURCES 3

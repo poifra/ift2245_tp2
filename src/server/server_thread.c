@@ -17,18 +17,10 @@
 #include <time.h>
 
 #include <stdbool.h>
-
+#include <conf.h>
 
 
 // Variable obtenue de /conf.c
-extern const int port_number;
-
-extern const unsigned int num_resources;
-extern const unsigned int num_server_threads;
-extern const unsigned int max_wait_time;
-extern const unsigned int server_backlog_size;
-extern const unsigned int *available_resources;
-
 
 unsigned int server_socket_fd;
 
@@ -106,7 +98,7 @@ st_init ()
 	int i, j;
 	int count = num_server_threads;
 	bool safe = false;
-/*	
+	
 	available = malloc(num_resources * sizeof(int));
 	allocation = malloc(num_resources * sizeof(int*));
 	max = malloc(num_clients * sizeof(int*));
@@ -115,11 +107,11 @@ st_init ()
 		error("null pointer exception");
 	}
 	for (i = 0; i < num_resources; i++) {
-		available[i] = available_resources[i];
+                available[i] = *(available_resources+i);
 		allocation[i] = malloc(num_resources * sizeof(int));
 		max[i] = malloc(num_resources * sizeof(int));
 		need[i] = malloc(num_resources * sizeof(int));
-		if (available[i] == NULL || allocation[i] == NULL || max[i] == NULL || need[i] == NULL) {
+		if (allocation[i] == NULL || max[i] == NULL || need[i] == NULL) {
 			error("null pointer exception");
 		}
 		for (j = 0; j < num_clients; j++) {
@@ -128,7 +120,7 @@ st_init ()
 			need[i][j] = 0;
 		}
 	}
-	*/
+        //	*/
 	// TODO
 	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
 
@@ -141,13 +133,9 @@ st_init ()
 void
 st_process_request (server_thread *st, int socket_fd)
 {
-	int size = sizeof(int32_t) * 5;
-	int32_t *msg = malloc(size);
-	if (msg == NULL)
-	{
-		error("pas de mémoire");
-	}
-	char *data = (char *) msg;
+	int size = sizeof(int) * 5;
+	char data[size];
+        int *msg;
 	int remaining = size;
 	int rc;
 	while (remaining)
@@ -162,7 +150,7 @@ st_process_request (server_thread *st, int socket_fd)
 		}
 		remaining -= rc;
 	}
-
+        msg = (int *) data;
 	switch (msg[0])
 	{
 	case END:
@@ -175,29 +163,26 @@ st_process_request (server_thread *st, int socket_fd)
 		printf("REQ recu\n");
 		break;
 	case BEGIN:
-		printf("BEGIN recu\n");
-	//	num_clients = msg[1];
-	//	num_resources = msg[2];
+		printf("BEGIN recu\n");                
+                if(num_resources != msg[1])
+                        error("Invalid number of resources declared by client");
+                num_clients = msg[2];                
 		break;
 	case INIT:
-		printf("INIT recu\n");
+                printf("INIT recu\n");
 		request_processed++;
 		break;
 	default:
 		printf("lolnope msg[0] is %d \n",msg[0]);
 		break;
 	}
-	msg = NULL;
 
 	size = sizeof(int32_t) * 2;
-	int32_t *reponse = malloc(size);
-	if (reponse == NULL) {
-		error("memoire epuisée");
-	}
-
+	int32_t reponse[2];
+        char *response_data;
 	reponse[0] = ACK;
-	reponse[1] = -1;
-	data = (char *) reponse;
+	reponse[1] = -1;       
+	response_data = (char *) reponse;
 	remaining = size;
 	rc = 0;
 	while (remaining) {
@@ -211,7 +196,6 @@ st_process_request (server_thread *st, int socket_fd)
 		remaining -= rc;
 		printf("next round %d\n", remaining);
 	}
-	reponse = NULL;
 
 }
 
