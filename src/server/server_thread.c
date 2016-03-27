@@ -78,7 +78,7 @@ st_init_banquier ()
 	int count = num_server_threads;
 
 	available = malloc(num_resources * sizeof(int));
-	allocation = malloc(num_resources * sizeof(int*));
+	allocation = malloc(num_clients * sizeof(int*));
 	max = malloc(num_clients * sizeof(int*));
 	need = malloc(num_clients * sizeof(int*));
 	if (available == NULL || allocation == NULL || max == NULL || need == NULL) {
@@ -86,17 +86,21 @@ st_init_banquier ()
 	}
 	for (i = 0; i < num_resources; i++) {
 		available[i] = *(available_resources + i);
-		allocation[i] = malloc(num_resources * sizeof(int));
-		max[i] = malloc(num_resources * sizeof(int));
-		need[i] = malloc(num_resources * sizeof(int));
-		if (allocation[i] == NULL || max[i] == NULL || need[i] == NULL) {
+	}
+
+	for (j = 0; j < num_clients; j++) {
+		allocation[j] = malloc(num_resources * sizeof(int));
+		max[j] = malloc(num_resources * sizeof(int));
+		need[j] = malloc(num_resources * sizeof(int));
+		if (allocation[j] == NULL || max[j] == NULL || need[j] == NULL) {
 			error("null pointer exception");
 		}
-		for (j = 0; j < num_clients; j++) {
-			allocation[i][j] = 0;
-			max[i][j] = 0;
-			need[i][j] = 0;
+		for (i = 0; i < num_resources; i++) {
+			allocation[j][i] = 0;
+			max[j][i] = 0;
+			need[j][i] = 0;
 		}
+
 	}
 	//	*/
 	// TODO
@@ -108,52 +112,56 @@ st_init_banquier ()
 	// END TODO
 }
 
-//kill the banker!
-int st_execute_banker(int cid, int *req) {
-	int i, j;
-	int valid = 1;
-	int enough = 1;
-	int safe = 1;
-	int work[num_resources];
+//kill the banker
+int st_execute_banker(int cid, int *req){        
+        int i;
+        int valid = 1;
+        int enough = 1;
+        for(i = 0; i < num_resources; i++){
+                valid = valid && req[i] < need[cid][i];
+                enough = enough && req[i] < available[i];
+        }
+        if(!valid){
+                return -1;//refuse
+        }
+        else if(!enough) {
+                return 0;//wait
+        } else {
+                //calcul du nouvel état 
+                for(i = 0; i < num_resources; i++){
+                        available[i] -= req[i];
+                        allocation[cid][i] += req[i];
+                }
+        }
+        //vérification du nouvel état
+        int j;
+        int safe = 1;
+        int work[num_resources];
+        for(i = 0; i < num_resources; i++){
+                work[i] = available[i];
+        }
+        for(i = 0; i < num_clients && safe; i++){
+                safe = 1;
+                //safe = need[i] < work
+                for(j = 0; j < num_resources; i++){
+                        safe = safe && need[i][j] <= work[j];
+                }
+                if(safe){
+                        //work += allocation[i]
+                        for(j = 0; j < num_resources; j++){
+                                work[j] += allocation[i][j];
+                        }
+                }
+        }
+        if(!safe){
+                //rollback
+                for(i = 0; i < num_resources; i++){
+                        available[i] += req[i];
+                        allocation[cid][i] -= req[i];
+                }
+        }
 
-	/*
-	for (i = 0; i < num_resources; i++) {
-		valid = valid && req[i] < need[cid][i];
-		enough = enough && req[i] < available[i];
-	}
-	if (!valid) {
-		return -1;//refuse
-	}
-	else if (!enough) {
-		return 0;//wait
-	}
-	else {
-		//calcul du nouvel état
-		for (i = 0; i < num_resources; i++) {
-			available[i] -= req[i];
-			allocation[cid][i] += req[i];
-		}
-	}
-	//vérification du nouvel état
-	for (i = 0; i < num_resources; i++) {
-		work[i] = available[i];
-	}
-	for (i = 0; i < num_clients && safe; i++) {
-		safe = 1;
-		//safe = need[i] < work
-		for (j = 0; j < num_resources; i++) {
-			safe = safe && need[i][j] <= work[j];
-		}
-		if (safe) {
-			//work += allocation[i]
-			for (j = 0; j < num_resources; j++) {
-				work[j] += allocation[i][j];
-			}
-		}
-	}
-*/
-	return safe;
-
+        return safe;
 }
 
 void
@@ -168,7 +176,7 @@ st_process_request (server_thread *st, int socket_fd)
 	{
 		rc = read(socket_fd, data + size - remaining, remaining);
 
-	//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &msg, data + size - remaining, size, remaining, rc);
+		//	printf("read data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n",data, &msg, data + size - remaining, size, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on read");
@@ -193,7 +201,7 @@ st_process_request (server_thread *st, int socket_fd)
 	case REQ:
 		request_processed++;
 		printf("REQ recu\n");
-		printf("msg[1] cid = %d\n",msg[1]);
+		printf("msg[1] cid = %d\n", msg[1]);
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
 			reponse[0] = ACK;
@@ -239,7 +247,7 @@ st_process_request (server_thread *st, int socket_fd)
 	while (remaining) {
 
 		rc = write(socket_fd, response_data + size - remaining, remaining);
-	//	printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, size, remaining, rc);
+		//	printf("write data:%p msg:%p send:%p sizeof(msg):%d remaining:%d rc:%d\n", data, &reponse, data + size - remaining, size, remaining, rc);
 
 		if (rc < 0) {
 			error("server error on write");
@@ -314,15 +322,15 @@ st_code (void *param)
 
 	// Boucle de traitement des requêtes
 	// Boucle tant que pas de end
-	while (!st->fini && (time (NULL) - start) <= max_wait_time){
+	while (!st->fini && (time (NULL) - start) <= max_wait_time) {
 		st_process_request (st, thread_socket_fd);
 	}
 
-	if (!st->fini){
+	if (!st->fini) {
 		fprintf (stderr, "Time out no request on thread %d.\n", st->id);
 	}
-	printf("fin pt_tid %0x\n",st->pt_tid);
-	shutdown(thread_socket_fd,SHUT_RDWR);
+	printf("fin pt_tid %0x\n", st->pt_tid);
+	shutdown(thread_socket_fd, SHUT_RDWR);
 	close(thread_socket_fd);
 	pthread_exit (NULL);
 
