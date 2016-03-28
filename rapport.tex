@@ -133,7 +133,26 @@
 	\newpage
 \section{Fonctionnement du programme}
 \section{Gestion des deadlocks}
+La prévention de \emph{deadlock} est assurée par l'algorithme du banquier.
+Cette algorithme ne permet au serveur d'allouée des ressources à un client seulement si cette allocation est garantie de ne pas mener à un \emph{deadlock}.
+Chaque requête est vérifiée par cette algorithme, et un \emph{deadlock} est donc impossible.
 \section{Prévention de la corruption}
+La corruption des données peut subvenir lors de la transmission ou de la réception d'information,
+c'est-à-dire lors de l'utilisation des fonctions ``read'' et ``write'' avec les \emph{socket}.
+Pour transmettre un message, constituée d'entiers de type ``int32'', on converti d'abord ce message en bytes en interprétant(\emph{cast})
+le tableau d'entiers contenant le message en tableau de \emph{char}. La raison pour cette conversion est que la transmission d'information se fait byte par byte.
+De même pour la réception, le message est reçu sous forme de bytes(\emph{char}), et une fois le message reçu complètement,
+le \emph{buffer} est converti en tableau d'entiers.
+Le type du message est déterminé par le premier entier, qui est une valeur correspond à un des types énumérables définit dans \emph{protocole.h}
+(INIT, END, REQ, BEGIN, CLOSE, WAIT, REFUSE, ACK).
+Tout dépendant du type, le message peut aussi contenir d'autres informations qui doivent répondre à certaines contraintes.
+Par exemple, le message ``BEGIN'' contient aussi le nombre de ressources et le nombre de clients comme valeurs.
+Le nombre de ressources étant déjà connu du serveur, on peut vérifier la validité du message en s'assurant que la deuxième valeur du message correspond à la valeur du nombre de ressources déclaré dans le fichier conf.c du serveur.
+Dans le cas d'un message ``REQ'' ou ``INIT'', le numéro d'identification du client ainsi qu'une séquence de valeurs dont la taille est celle du nombre de ressources sont aussi inclus.
+Le numéro du client doit être inférieur au nombre de clients. Cette vérification est faite à la réception du message(dans \emph{st\_process\_request}).
+Dans le cas du INIT, la quantité maximale de chaque ressources doit être inférieur à la quantité disponible de cette ressource.
+Dans le cas de ``REQ'', les valeurs absolues des valeurs suivant le numéro d'identification doivent être inférieur au nombre de ressources maximales déclaré par le client lors du INIT. Cette vérification est faite dans l'algorithme du banquier.
+
 \section{Synchronisation de la fin de l'éxecution}
 %% ¡¡ REMPLIR ICI !!
 
