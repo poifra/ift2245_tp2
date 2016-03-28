@@ -135,10 +135,9 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			count_accepted++;
 		break;
 	case WAIT:
+		count_on_wait++;
 		sleep(reponse[1]);
 		send_request (client_id, request_id, socket_fd, msg);
-		count_on_wait++;
-                sleep(reponse[1]);
                 //Try again
 		break;
 	default:
