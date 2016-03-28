@@ -141,6 +141,14 @@ Lorsque toutes les données nécéssaires à la construction d'uen requête sont
 La prévention de \emph{deadlock} est assurée par l'algorithme du banquier.
 Cette algorithme ne permet au serveur d'allouée des ressources à un client seulement si cette allocation est garantie de ne pas mener à un \emph{deadlock}.
 Chaque requête est vérifiée par cette algorithme, et un \emph{deadlock} est donc impossible.
+Pour assurer l'absence de deadlock, l'algorithme vérifie d'abord si les ressources demandées sont actuellement disponible.
+Si ce n'est pas le cas, le serveur envoie le message ``WAIT''.
+Si les ressources sont disponible, l'algorithme simule l'allocation des ressources demandées.
+Il vérifi ensuite que le nouvel état calculé n'est \emph{unsafe}.
+Un état est \emph{unsafe} s'il ne permet pas aux autres processus/thread de terminer.
+On essaie donc de trouver une séquence d'allocation qui permetterait aux thread de terminer.
+Si cela est impossible, l'état est \emph{unsafe}, et alors la requête est refusée.
+Autrement, la requête est acceptée.
 \section{Prévention de la corruption}
 La corruption des données peut subvenir lors de la transmission ou de la réception d'information,
 c'est-à-dire lors de l'utilisation des fonctions ``read'' et ``write'' avec les \emph{socket}.
