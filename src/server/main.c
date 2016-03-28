@@ -43,10 +43,6 @@ main (int argc, char *argv[argc + 1])
     pthread_join (st[i].pt_tid, NULL);
   }
     
-
-  // Signale aux clients de se terminer.
-  st_signal ();
-
   // Affiche le journal.
   st_print_results (stdout, true);
   FILE *fp = fopen("server_log", "w");

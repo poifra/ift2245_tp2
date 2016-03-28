@@ -220,7 +220,6 @@ void
 ct_wait_server ()
 {
 	int running;
-	// TP2 TODO
 	do {
 		running = 0;
 		for (int i = 0; i < num_clients; i++)
@@ -232,7 +231,6 @@ ct_wait_server ()
 		}
 	}
 	while (running != 0);
-	// TP2 TODO:END
 
 }
 

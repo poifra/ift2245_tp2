@@ -105,14 +105,6 @@ st_init_banquier ()
 		}
 
 	}
-	//	*/
-	// TODO
-	//https://en.wikipedia.org/wiki/Banker%27s_algorithm
-
-	// Attend la connection d'un client et initialise les structures pour
-	// l'algorithme du banquier.
-
-	// END TODO
 }
 
 int st_init_client(int cid, int32_t *client_max){
