@@ -150,24 +150,40 @@ int st_execute_banker(int cid, int *req){
         }
         //vérification du nouvel état
         int j;
-        int safe = 1;
+        int safe = true;
         int work[num_resources];
+        int finished[num_clients];
+        int done = false;
         //Work = available
         for(i = 0; i < num_resources; i++){
-                work[i] = available[i];
+                work[i] = available[i];                
         }
-        for(i = 0; i < num_clients && safe; i++){
-                safe = 1;
-                //safe = need[i] <= work
-                for(j = 0; j < num_resources && safe; j++){
-                        safe = safe && need[i][j] <= work[j];
-                }
-                if(safe){
-                        //work += allocation[i]
-                        for(j = 0; j < num_resources; j++){
-                                work[j] += allocation[i][j];
+        for(i = 0; i < num_clients; i++){
+                finished[i] = false;                
+        }
+        while(safe && !done){
+                safe = false;
+                for(i = 0; i < num_clients; i++){
+                        if(!finished[i]){
+                                safe = true;
+                                //safe = need[i] <= work                                
+                                for(j = 0; j < num_resources && safe; j++){
+                                        safe = safe && need[i%num_clients][j] <= work[j];
+                                }                
+                                if(safe){
+                                        finished[i%num_clients] = true;
+                                        //work += allocation[i]
+                                        for(j = 0; j < num_resources; j++){
+                                                work[j] += allocation[i%num_clients][j];
+                                        }
+                                        i = 0;
+                                }
                         }
                 }
+                done = true;
+                for(i = 0; i < num_clients; i++){
+                        done = done && finished[i];
+                }                                
         }
         if(!safe){
                 //rollback
@@ -179,6 +195,15 @@ int st_execute_banker(int cid, int *req){
 
         pthread_mutex_unlock(&banker_lock);
         return safe;
+}
+
+void st_free_resources(int cid){
+        int i;
+        for(i = 0; i < num_resources; i++){
+                available[i] += allocation[cid][i];
+                allocation[cid][i] = 0;
+                need[cid][i] = 0;
+        }        
 }
 
 void
@@ -213,6 +238,7 @@ st_process_request (server_thread *st, int socket_fd)
 		clients_ended++;
 		reponse[0] = ACK;
 		reponse[1] = -1;
+                st_free_resources(msg[1]);
 		st->fini = 1;
 		break;
 	case REQ:
@@ -225,15 +251,18 @@ st_process_request (server_thread *st, int socket_fd)
 		switch (st_execute_banker(msg[1], msg + 2)) {
 		case 1:
                         count_accepted++;
+                        printf("Le serveur accept la requête.\n");
 			reponse[0] = ACK;
 			reponse[1] = -1;
 			break;
 		case -1:
+                        printf("Le serveur refuse la requête.\n");
                         count_invalid++;
 			reponse[0] = REFUSE;
 			reponse[1] = -1;
 			break;
 		case 0:
+                        printf("Le serveur met en attente le cient.\n");
                         count_on_wait++;
 			reponse[0] = WAIT;
 			reponse[1] = waiting_time;
@@ -337,12 +366,12 @@ st_code (void *param)
 {
 	server_thread *st = (server_thread *) param;
 	st->fini = 0;
-
+        
 	struct sockaddr_in thread_addr;
 	socklen_t socket_len = sizeof (thread_addr);
 	int thread_socket_fd = -1;
 	int start = time (NULL);
-
+        
 	// Boucle jusqu'à ce que accept recoive la première connection.
 	while (thread_socket_fd < 0)
 	{
@@ -357,12 +386,12 @@ st_code (void *param)
 		}
 	}
 
-
 	// Boucle de traitement des requêtes
 	// Boucle tant que pas de end
 	while (!st->fini && (time (NULL) - start) <= max_wait_time) {
 		st_process_request (st, thread_socket_fd);
 	}
+
 
 	if (!st->fini) {
 		fprintf (stderr, "Time out no request on thread %d.\n", st->id);

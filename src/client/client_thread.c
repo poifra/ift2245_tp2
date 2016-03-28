@@ -59,36 +59,17 @@ void initThreadRunning()
 int
 send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 {
-	int32_t *msg;
 	int size = sizeof(int32_t) * (num_resources+2);
 
 	if (message == NULL)
 	{
-		msg = malloc(size);
-		if (msg == NULL) {
-			error("mourru");
-		}
-		msg[0] = REQ;
-		msg[1] = client_id; 
-
-		int32_t freeOrGet = 0;
-		int32_t amount = 0;
-		//choose random values to ask or release
-		srand(time(NULL));
-		for(int i = 2; i < num_clients; i++)
-		{
-			freeOrGet = rand() % 2 ? -1 : 1;
-			amount = (rand() % max_resources_per_client[client_id][i]);
-			msg[i] = freeOrGet * amount;
-		}
-	}
-	else {
-		msg = message;
+                error("NULL message");
+                return 1;
 	}
 
 	//printf("msg[0] client %d\n",msg[0]);
 
-	char *data = (char *) msg;
+	char *data = (char *) message;
 	int remaining = size;
 	int rc;
 	while (remaining)
@@ -102,7 +83,7 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 	}
 	request_sent++;
 
-	printf("le client envoie %d %d %d %d %d sur le socket %d\n", msg[0], msg[1], msg[2], msg[3], msg[4], socket_fd);
+	printf("le client envoie %d %d %d %d %d sur le socket %d\n", message[0], message[1], message[2], message[3], message[4], socket_fd);
 
 	size = 2 * sizeof(int32_t);
 	int32_t *reponse = malloc(size);
@@ -129,15 +110,15 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		count_invalid++;
 		break;
 	case ACK:
-		if(msg[0]==END)
+		if(message[0]==END)
 			count_dispatched++;
-		else if(msg[0] == INIT || msg[0] == REQ)
+		else if(message[0] == INIT || message[0] == REQ)
 			count_accepted++;
 		break;
 	case WAIT:
 		count_on_wait++;
 		sleep(reponse[1]);
-		send_request (client_id, request_id, socket_fd, msg);
+		send_request (client_id, request_id, socket_fd, message);
                 //Try again
 		break;
 	default:
@@ -184,17 +165,30 @@ ct_code (void *param)
 {
 	int socket_fd = connectServer();
 	client_thread *ct = (client_thread *) param;
-        int32_t init_message[num_resources+2];
-        init_message[0] = INIT;
-        init_message[1] = ct->id;
+        int32_t message[num_resources+2];
+        int32_t freeOrGet;
+        int32_t amount;
+        message[0] = INIT;
+        message[1] = ct->id;
         for(int i = 0; i < num_resources; i++){
-                init_message[i+2] = max_resources_per_client[ct->id][i];
+                message[i+2] = max_resources_per_client[ct->id][i];
         }
-        send_request (ct->id, -1, socket_fd, init_message);//INIT
+        send_request (ct->id, -1, socket_fd, message);//INIT
+        message[0] = REQ;
+        message[1] = ct->id;
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
+		//choose random values to ask or release
+		srand(time(NULL));
+		for(int i = 0; i < num_resources; i++)
+		{
+			freeOrGet = rand() % 2 ? -1 : 1;
+			amount = (rand() % max_resources_per_client[ct->id][i]);
+			message[i+2] = freeOrGet * amount;
+		}
+
 		printf("client %d sending request %d\n", ct->id, request_id);
-		send_request (ct->id, request_id, socket_fd, NULL);
+		send_request (ct->id, request_id, socket_fd, message);
 	}
 
 	int32_t endRequest[5] = {END, -1, -1, -1, -1};
