@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include <unistd.h>
+#include <fcntl.h>
+
 #include <strings.h>
 #include <string.h>
 
@@ -59,8 +61,12 @@ void initThreadRunning()
 int
 send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 {
+	if (fcntl(socket_fd, F_GETFL) < 0)
+	{
+		printf("AAAAAAAAAAAAAAAAAAAA\n");
+	}
 	int32_t *msg;
-	int size = sizeof(int32_t) * (num_resources+2);
+	int size = sizeof(int32_t) * (num_resources + 2);
 
 	if (message == NULL)
 	{
@@ -69,13 +75,13 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 			error("mourru");
 		}
 		msg[0] = REQ;
-		msg[1] = client_id; 
+		msg[1] = client_id;
 
 		int32_t freeOrGet = 0;
 		int32_t amount = 0;
 		//choose random values to ask or release
 		srand(time(NULL));
-		for(int i = 2; i < num_clients; i++)
+		for (int i = 2; i < num_clients; i++)
 		{
 			freeOrGet = rand() % 2 ? -1 : 1;
 			amount = (rand() % max_resources_per_client[client_id][i]);
@@ -129,16 +135,18 @@ send_request (int client_id, int request_id, int socket_fd, int32_t *message)
 		count_invalid++;
 		break;
 	case ACK:
-		if(msg[0]==END)
+		if (msg[0] == END) {
 			count_dispatched++;
-		else if(msg[0] == INIT || msg[0] == REQ)
+		}
+		else if (msg[0] == INIT || msg[0] == REQ) {
 			count_accepted++;
+		}
 		break;
 	case WAIT:
 		count_on_wait++;
 		sleep(reponse[1]);
 		send_request (client_id, request_id, socket_fd, msg);
-                //Try again
+		//Try again
 		break;
 	default:
 		printf("code de reponse inconnu %d\n", reponse[0]);
@@ -184,13 +192,13 @@ ct_code (void *param)
 {
 	int socket_fd = connectServer();
 	client_thread *ct = (client_thread *) param;
-        int32_t init_message[num_resources+2];
-        init_message[0] = INIT;
-        init_message[1] = ct->id;
-        for(int i = 0; i < num_resources; i++){
-                init_message[i+2] = max_resources_per_client[ct->id][i];
-        }
-        send_request (ct->id, -1, socket_fd, init_message);//INIT
+	int32_t init_message[num_resources + 2];
+	init_message[0] = INIT;
+	init_message[1] = ct->id;
+	for (int i = 0; i < num_resources; i++) {
+		init_message[i + 2] = max_resources_per_client[ct->id][i];
+	}
+	send_request (ct->id, -1, socket_fd, init_message);//INIT
 	for (unsigned int request_id = 0; request_id < num_request_per_client; request_id++)
 	{
 		printf("client %d sending request %d\n", ct->id, request_id);
