@@ -11,7 +11,6 @@ default: all
 all:
 	cd $(CLIENT_DIR) && make
 	cd $(SERVER_DIR) && make
-	echo "cool"
 
 
 run: all

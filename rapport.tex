@@ -131,45 +131,39 @@
 	\tableofcontents
 
 	\newpage
-\section{Fonctionnement du programme}
-Le serveur commence en attedant la requête initiale, encodée sous forme d'énumération comme un \textit{BEGIN}. Cette requête est aussi constituée du nombre de clients et du nombre de ressources que chaque client peut utiliser. Une fois que le serveur possède ces informations, il peut initialiser les structures de données requises au bon fonctionnement de l'algorithme du banquier, décrit plus dans détail dans la section sur la gestion des inter-blocages. Le serveur initialise par la suite un \textit{thread} par client, pour gérer les connexions. Cette approche, différente de celle proposée dans l'énoncé du travail, est beaucoup plus simple. En effet, nous n'avons pas à gérer de file d'attente entre différents clients qui essairaient de se connecter sur un même socket, dans un même thread.
+	\section{Fonctionnement du programme}
+	Le serveur commence en attedant la requête initiale, encodée sous forme d'énumération comme un \textit{BEGIN}. Cette requête est aussi constituée du nombre de clients et du nombre de ressources que chaque client peut utiliser. Une fois que le serveur possède ces informations, il peut initialiser les structures de données requises au bon fonctionnement de l'algorithme du banquier, décrit plus dans détail dans la section sur la gestion des inter-blocages. Le serveur initialise par la suite un \textit{thread} par client, pour gérer les connexions. Cette approche, différente de celle proposée dans l'énoncé du travail, est beaucoup plus simple. En effet, nous n'avons pas à gérer de file d'attente entre différents clients qui essairaient de se connecter sur un même socket, dans un même thread.
 
-Une fois l'initialisation des structures terminée, le programme du client commence à envoyer ses requêtes, définies comme variables de configuration. La quantité de ressource à utiliser est déterminée de manière aléatoire avec un appel à \textit{rand(3)}. Remarquons que cette fonction retourne toujours la même suite d'entiers si elle est appelée dans les mêmes conditions. Pour éviter ce problème, nous commençons à un endroit pseudo-aléatoire dans la suite, à l'aide de la fonction \textit{srand(3)} et du temps courant. La fonction de génération de nombre aléatoires est aussi utilisée pour déterminer si le client doit tenter de libérer ou de prendre des ressources. Pour déterminer ce paramètre, nous vérifions la parité du nombre généré. 
+	Une fois l'initialisation des structures terminée, le programme du client commence à envoyer ses requêtes, définies comme variables de configuration. La quantité de ressource à utiliser est déterminée de manière aléatoire avec un appel à \textit{rand(3)}. Remarquons que cette fonction retourne toujours la même suite d'entiers si elle est appelée dans les mêmes conditions. Pour éviter ce problème, nous commençons à un endroit pseudo-aléatoire dans la suite, à l'aide de la fonction \textit{srand(3)} et du temps courant. La fonction de génération de nombre aléatoires est aussi utilisée pour déterminer si le client doit tenter de libérer ou de prendre des ressources. Pour déterminer ce paramètre, nous vérifions la parité du nombre généré. 
 
-Lorsque toutes les données nécéssaires à la construction d'uen requête sont complètes, celle-ci est envoyée à l'aide du \textit{socket} approprié. Notons que le client envoie toujours (nb_ressources+2) entiers. Dans la configuration de base, il y a trois ressources, donc le client envoie cinq entiers. Les deux autres sont respectivement le code du message et un nombre relatif au code envoyé. Par exemple, dans le  Il est possible que l'opération ne réussise pas d'un coup, si le système est particulièrement lent ou congestionné. C'est pourquoi les opérations de lecture et d'écritures sont dans des boucles et utilisent de l'artithmétique de pointeurs pour positionner correctement l'information reçue ou transmise. Les données sont d'abord lues dans un \textit{buffer} qui est en fait l'adresse mémoire où il faut stocker ce qui est lu ou écrit.
-\section{Gestion des deadlocks}
-La prévention de \emph{deadlock} est assurée par l'algorithme du banquier.
-Cette algorithme ne permet au serveur d'allouée des ressources à un client seulement si cette allocation est garantie de ne pas mener à un \emph{deadlock}.
-Chaque requête est vérifiée par cette algorithme, et un \emph{deadlock} est donc impossible.
-Pour assurer l'absence de deadlock, l'algorithme vérifie d'abord si les ressources demandées sont actuellement disponible.
-Si ce n'est pas le cas, le serveur envoie le message ``WAIT''.
-Si les ressources sont disponible, l'algorithme simule l'allocation des ressources demandées.
-Il vérifi ensuite que le nouvel état calculé n'est \emph{unsafe}.
-Un état est \emph{unsafe} s'il ne permet pas aux autres processus/thread de terminer.
-On essaie donc de trouver une séquence d'allocation qui permetterait aux thread de terminer.
-Si cela est impossible, l'état est \emph{unsafe}, et alors la requête est refusée.
-Autrement, la requête est acceptée.
-\section{Prévention de la corruption}
-La corruption des données peut subvenir lors de la transmission ou de la réception d'information,
-c'est-à-dire lors de l'utilisation des fonctions ``read'' et ``write'' avec les \emph{socket}.
-Pour transmettre un message, constituée d'entiers de type ``int32'', on converti d'abord ce message en bytes en interprétant(\emph{cast})
-le tableau d'entiers contenant le message en tableau de \emph{char}. La raison pour cette conversion est que la transmission d'information se fait byte par byte.
-De même pour la réception, le message est reçu sous forme de bytes(\emph{char}), et une fois le message reçu complètement,
-le \emph{buffer} est converti en tableau d'entiers.
-Le type du message est déterminé par le premier entier, qui est une valeur correspond à un des types énumérables définit dans \emph{protocole.h}
-(INIT, END, REQ, BEGIN, CLOSE, WAIT, REFUSE, ACK).
-Tout dépendant du type, le message peut aussi contenir d'autres informations qui doivent répondre à certaines contraintes.
-Par exemple, le message ``BEGIN'' contient aussi le nombre de ressources et le nombre de clients comme valeurs.
-Le nombre de ressources étant déjà connu du serveur, on peut vérifier la validité du message en s'assurant que la deuxième valeur du message correspond à la valeur du nombre de ressources déclaré dans le fichier conf.c du serveur.
-Dans le cas d'un message ``REQ'' ou ``INIT'', le numéro d'identification du client ainsi qu'une séquence de valeurs dont la taille est celle du nombre de ressources sont aussi inclus.
-Le numéro du client doit être inférieur au nombre de clients. Cette vérification est faite à la réception du message(dans \emph{st\_process\_request}).
-Dans le cas du INIT, la quantité maximale de chaque ressources doit être inférieur à la quantité disponible de cette ressource.
-Dans le cas de ``REQ'', les valeurs absolues des valeurs suivant le numéro d'identification doivent être inférieur au nombre de ressources maximales déclaré par le client lors du INIT. Cette vérification est faite dans l'algorithme du banquier.
+	Lorsque toutes les données nécéssaires à la construction d'une requête sont complètes, celle-ci est envoyée à l'aide du \textit{socket} approprié. Notons que le client envoie toujours (nb\_ressources+2) entiers. Dans la configuration de base, il y a trois ressources, donc le client envoie cinq entiers. Les deux autres sont respectivement le code du message et un nombre relatif au code envoyé. Par exemple, dans le  Il est possible que l'opération ne réussise pas d'un coup, si le système est particulièrement lent ou congestionné. C'est pourquoi les opérations de lecture et d'écritures sont dans des boucles et utilisent de l'artithmétique de pointeurs pour positionner correctement l'information reçue ou transmise. Les données sont d'abord lues dans un \textit{buffer} qui est en fait l'adresse mémoire où il faut stocker ce qui est lu ou écrit.
 
-\section{Synchronisation de la fin de l'éxecution}
-Le serveur est programmé de manière à ne pas se terminer tant qu'il reste au moins un client d'actif ou tant que le temps limite n'est pas atteint. Si tous les clients sont terminés, alors le serveur se termine en appelant les fonctions de fin de traitement de sockets, telles que \textit{close(2)} et \textit{shutdown(2)}. Dans le cas où le \textit{timeout} serait atteint, nous fermons tous les threads serveurs et la fonction de \textit{shutdown} est appelée avec le paramètre \textit{SHUT\_RDWR}, qui a pour effet de faire un \textit{flush} sur les données qui pourraient êtres en cours de transfert. Cela fait que les clients peuvent par la suite arrêter d'envoyer des données sans causer d'erreur.
+	\section{Gestion des deadlocks}
+	La prévention de \emph{deadlock} est assurée par l'algorithme du banquier.
+	Cet algorithme permet au serveur d'allouer des ressources à un client seulement si cette allocation est garantie de ne pas mener à un \emph{deadlock}.
+	Chaque requête est vérifiée par cette algorithme, et un \emph{deadlock} est donc impossible.
 
-Si une erreur de lecture ou d'écriture survient, par exemple si le serveur et un client perdent leur connexion, le programme qui détecte l'erreur (à l'aide du code de retour) arrête tout traitement et termine. Cela va enchaîner une erreur de lecture dans l'autre programme, qui va arrêter à son tour.
-%% ¡¡ REMPLIR ICI !!
+	\section{Prévention de la corruption}
+	La corruption des données peut subvenir lors de la transmission ou de la réception d'information,
+	c'est-à-dire lors de l'utilisation des fonctions ``read'' et ``write'' avec les \emph{socket}.
+	Pour transmettre un message, constituée d'entiers de type ``int32'', on converti d'abord ce message en bytes en interprétant(\emph{cast})
+	le tableau d'entiers contenant le message en tableau de \emph{char}. La raison pour cette conversion est que la transmission d'information se fait byte par byte.
+	De même pour la réception, le message est reçu sous forme de bytes(\emph{char}), et une fois le message reçu complètement,
+	le \emph{buffer} est converti en tableau d'entiers.
+	Le type du message est déterminé par le premier entier, qui est une valeur correspond à un des types énumérables définit dans \emph{protocole.h}
+	(INIT, END, REQ, BEGIN, CLOSE, WAIT, REFUSE, ACK).
+	Tout dépendant du type, le message peut aussi contenir d'autres informations qui doivent répondre à certaines contraintes.
+	Par exemple, le message ``BEGIN'' contient aussi le nombre de ressources et le nombre de clients comme valeurs.
+	Le nombre de ressources étant déjà connu du serveur, on peut vérifier la validité du message en s'assurant que la deuxième valeur du message correspond à la valeur du nombre de ressources déclaré dans le fichier conf.c du serveur.
+	Dans le cas d'un message ``REQ'' ou ``INIT'', le numéro d'identification du client ainsi qu'une séquence de valeurs dont la taille est celle du nombre de ressources sont aussi inclus.
+	Le numéro du client doit être inférieur au nombre de clients. Cette vérification est faite à la réception du message(dans \emph{st\_process\_request}).
+	Dans le cas du INIT, la quantité maximale de chaque ressources doit être inférieur à la quantité disponible de cette ressource.
+	Dans le cas de ``REQ'', les valeurs absolues des valeurs suivant le numéro d'identification doivent être inférieur au nombre de ressources maximales déclaré par le client lors du INIT. Cette vérification est faite dans l'algorithme du banquier.
+
+	\section{Synchronisation de la fin de l'éxecution}
+	Le serveur est programmé de manière à ne pas se terminer tant qu'il reste au moins un client d'actif ou tant que le temps limite n'est pas atteint. Si tous les clients sont terminés, alors le serveur se termine en appelant les fonctions de fin de traitement de sockets, telles que \textit{close(2)} et \textit{shutdown(2)}. Dans le cas où le \textit{timeout} serait atteint, nous fermons tous les threads serveurs et la fonction de \textit{shutdown} est appelée avec le paramètre \textit{SHUT\_RDWR}, qui a pour effet de faire un \textit{flush} sur les données qui pourraient êtres en cours de transfert. Cela fait que les clients peuvent par la suite arrêter d'envoyer des données sans causer d'erreur.
+
+	Si une erreur de lecture ou d'écriture survient, par exemple si le serveur et un client perdent leur connexion, le programme qui détecte l'erreur (à l'aide du code de retour) arrête tout traitement et termine. Cela va enchaîner une erreur de lecture dans l'autre programme, qui va arrêter à son tour.
+	%% ¡¡ REMPLIR ICI !!
 
 \end{document}
